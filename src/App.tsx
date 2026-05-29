@@ -833,7 +833,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => liff.login()}
-                            className="bg-[#06C755] hover:bg-[#05b04b] text-white font-extrabold text-[11px] px-4 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 font-sans"
+                            className="bg-[#06C755] hover:bg-[#05b04b] text-white font-extrabold text-[11px] px-4 rounded-xl shadow-md hover:shadow-emerald-500/20 active:scale-[0.98] transform hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shrink-0 font-sans"
                           >
                             <span>ดึงชื่อจาก LINE</span>
                           </button>
@@ -900,7 +900,7 @@ export default function App() {
                     onClick={handleSubmit}
                     type="submit"
                     disabled={submitting}
-                    className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-extrabold py-3.5 px-8 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 transition-all cursor-pointer text-sm"
+                    className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-extrabold py-3.5 px-8 rounded-2xl shadow-lg hover:shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] transform hover:-translate-y-0.5 cursor-pointer text-sm"
                   >
                     {submitting ? (
                       <>
@@ -944,7 +944,7 @@ export default function App() {
                         <div 
                           key={inc.id}
                           onClick={() => setSelectedIncident(inc)}
-                          className={`p-3.5 bg-slate-50 hover:bg-slate-100 border-l-4 rounded-xl cursor-pointer transition-all border ${
+                          className={`p-3.5 bg-slate-50 hover:bg-slate-100 border-l-4 rounded-xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm border ${
                             inc.status === 'Resolved' ? 'border-emerald-500 border-l-emerald-500 bg-emerald-50/10' :
                             inc.status === 'Investigating' ? 'border-amber-500 border-l-amber-500 bg-amber-50/10 animate-pulse' :
                             'border-rose-500 border-l-rose-500'
@@ -1539,7 +1539,7 @@ export default function App() {
 
       {/* Admin Action Modal for Case Status resolution / Investigating */}
       {selectedIncident && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-xs">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-md">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full overflow-hidden shadow-2xl flex flex-col">
             
             {/* Modal Header */}
@@ -1664,7 +1664,7 @@ export default function App() {
 
       {/* Admin Authentication Passcode Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-xs">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-md">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-sm w-full overflow-hidden shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
