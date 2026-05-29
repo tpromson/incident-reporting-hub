@@ -68,10 +68,27 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [googleSheetId, setGoogleSheetId] = useState('1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI');
+
   // Fetch incidents on load
   useEffect(() => {
     fetchIncidents();
+    fetchConfig();
   }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch('/api/config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.googleSheetId) {
+          setGoogleSheetId(data.googleSheetId);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch config:", err);
+    }
+  };
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -426,7 +443,7 @@ export default function App() {
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'spreadsheet' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
           >
             <FileSpreadsheet size={14} />
-            Google Sheet (<span className="truncate max-w-[40px]">1Wyq...</span>)
+            Google Sheet (<span className="truncate max-w-[40px]">{googleSheetId}</span>)
           </button>
           <button 
             onClick={() => setActiveTab('line')}
@@ -875,7 +892,7 @@ export default function App() {
                   <FileSpreadsheet size={12} /> Google Sheets Sync Live Database
                 </span>
                 <h2 className="text-lg md:text-xl font-bold flex items-center gap-2 mt-1">
-                  Spreadsheet : <span className="font-mono text-emerald-200 text-sm md:text-base underline selection:bg-emerald-800">1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI</span>
+                  Spreadsheet : <span className="font-mono text-emerald-200 text-sm md:text-base underline selection:bg-emerald-800 break-all">{googleSheetId}</span>
                 </h2>
                 <p className="text-xs text-emerald-100/90 mt-1">ข้อมูลแถวที่ปรากฏจำลองตรงตามข้อมูลชีทที่ลิงก์ไว้สำหรับการอัพเดทข้อมูลรายงานของเซ็นเซอร์</p>
               </div>
@@ -889,7 +906,7 @@ export default function App() {
                   <span>ดาวน์โหลดไฟล์รายงาน (.CSV)</span>
                 </button>
                 <a 
-                  href="https://docs.google.com/spreadsheets/d/1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI/edit?gid=112576994#gid=112576994" 
+                  href={`https://docs.google.com/spreadsheets/d/${googleSheetId}/edit`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer border border-emerald-700 flex items-center gap-1.5"

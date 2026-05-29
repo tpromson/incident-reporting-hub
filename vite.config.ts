@@ -138,6 +138,11 @@ export default defineConfig(() => {
                 res.statusCode = 405;
                 res.end(JSON.stringify({ error: 'Method not allowed' }));
               }
+            } else if (req.url === '/api/config') {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({
+                googleSheetId: process.env.GOOGLE_SHEET_ID || '1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI'
+              }));
             } else if (req.url?.startsWith('/api/line/webhook')) {
               res.setHeader('Content-Type', 'application/json');
               if (req.method === 'POST') {
