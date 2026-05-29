@@ -1320,8 +1320,8 @@ export default function App() {
                     </div>
                     <div className="bg-slate-900 border border-slate-800 text-indigo-200 p-4 rounded-xl text-[11px] font-mono overflow-y-auto max-h-[150px] leading-relaxed">
 {`function doPost(e) {
-  // 1. ระบุ ID ของสเปรดชีตจริงของคุณ
-  var ss = SpreadsheetApp.openById("1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI");
+  // 1. ระบุ ID ของสเปรดชีตจริงของคุณ (ดึงตามแอปหลักของท่าน)
+  var ss = SpreadsheetApp.openById("${googleSheetId}");
   var sheet = ss.getSheets()[0];
   var data = JSON.parse(e.postData.contents);
   var timestamp = new Date();
@@ -1359,21 +1359,33 @@ export default function App() {
                         นำ Source Code ชุดเต็มนี้ไปโฮสต์จริงบนแพลตฟอร์มคลาวด์ เช่น <strong>Google Cloud Run</strong>, <strong>Vercel</strong>, หรือ <strong>VPC Linux Docker</strong> แล้วกำหนดค่าตัวแปรสภาพแวดล้อมดังนี้:
                       </p>
                       <div className="grid grid-cols-2 gap-2 mt-2">
-                        <div className="bg-white border rounded p-2 text-[10px] font-mono">
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
                           <strong>GEMINI_API_KEY</strong><br />
                           คีย์รับการวิเคราะห์แผนซ่อมของ AI
                         </div>
-                        <div className="bg-white border rounded p-2 text-[10px] font-mono">
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
                           <strong>GOOGLE_SHEET_WEBHOOK_URL</strong><br />
-                          ลิงก์เว็บแอป Apps Script ที่ก๊อปมาจากข้อ 3
+                          ลิงก์เว็บแอป Apps Script
                         </div>
-                        <div className="bg-white border rounded p-2 text-[10px] font-mono">
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
+                          <strong>GOOGLE_SHEET_ID</strong><br />
+                          ไอดี Google Spreadsheet จริง
+                        </div>
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
                           <strong>LINE_CHANNEL_ACCESS_TOKEN</strong><br />
-                          รหัสบอทสำหรับส่ง Flex message การแจ้งเตือน
+                          รหัส Access Token ของ LINE Bot
                         </div>
-                        <div className="bg-white border rounded p-2 text-[10px] font-mono">
-                          <strong>LINE_GROUP_ID</strong><br />
-                          ไอดีกลุ่มงานบำรุงที่เป็นปลายทาง
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
+                          <strong>LINE_TARGET_ID</strong><br />
+                          ไอดีกลุ่ม/แชทปลายทางที่จะส่งข้อความหา
+                        </div>
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
+                          <strong>FIREBASE_PROJECT_ID</strong><br />
+                          ไอดีโปรเจกต์ของ Firebase Database
+                        </div>
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2">
+                          <strong>FIREBASE_CLIENT_EMAIL & PRIVATE_KEY</strong><br />
+                          ข้อมูล Service Account สำหรับเชื่อมต่อฐานข้อมูล
                         </div>
                       </div>
                     </div>
