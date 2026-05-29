@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import liff from '@line/liff';
 import { 
   AlertTriangle, 
   Activity, 
@@ -43,6 +44,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isLIFTMode, setIsLIFTMode] = useState(false); // Simulated LINE webview container toggle
+  const [liffInitialized, setLiffInitialized] = useState(false);
   const [userRole, setUserRole] = useState<'user' | 'admin'>(() => {
     return sessionStorage.getItem('isAdminAuthenticated') === 'true' ? 'admin' : 'user';
   });
@@ -71,7 +73,7 @@ export default function App() {
   const [selectedSensorId, setSelectedSensorId] = useState('SN-2045');
   const [urgency, setUrgency] = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [description, setDescription] = useState('');
-  const [reporterName, setReporterName] = useState('Chakrit_LineAdmin');
+  const [reporterName, setReporterName] = useState('');
   const [attachment, setAttachment] = useState<string>(''); // base64 representation
   const [attachmentName, setAttachmentName] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -93,26 +95,36 @@ export default function App() {
 
   const [googleSheetId, setGoogleSheetId] = useState('1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI');
 
-  // Fetch incidents and sensors on load
+  // Fetch incidents and sensors on load and initialize LIFF
   useEffect(() => {
     fetchIncidents();
-    fetchConfig();
     fetchSensors();
-  }, []);
-
-  const fetchConfig = async () => {
-    try {
-      const res = await fetch('/api/config');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.googleSheetId) {
-          setGoogleSheetId(data.googleSheetId);
+    
+    const initLiff = async () => {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.googleSheetId) {
+            setGoogleSheetId(data.googleSheetId);
+          }
+          if (data.liffId) {
+            await liff.init({ liffId: data.liffId });
+            setLiffInitialized(true);
+            if (liff.isLoggedIn()) {
+              const profile = await liff.getProfile();
+              if (profile.displayName) {
+                setReporterName(profile.displayName);
+              }
+            }
+          }
         }
+      } catch (err) {
+        console.warn("Failed to initialize LIFF:", err);
       }
-    } catch (err) {
-      console.error("Failed to fetch config:", err);
-    }
-  };
+    };
+    initLiff();
+  }, []);
 
   const fetchSensors = async () => {
     try {
@@ -243,6 +255,10 @@ export default function App() {
   // Submit Incident Report
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!reporterName.trim()) {
+      alert("กรุณากรอกชื่อผู้รายงาน (LINE Display Name) ก่อนส่งรายงานครับ");
+      return;
+    }
     if (!description.trim()) {
       alert("กรุณากรอกอาการผิดปกติก่อนส่งรายงานครับ");
       return;
@@ -799,16 +815,28 @@ export default function App() {
 
                     {/* Input: Reporter LINE Name */}
                     <div className="flex flex-col gap-2">
-                      <label className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
-                        LINE Display Name (ผู้รายงาน)
+                      <label className="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex justify-between">
+                        <span>LINE Display Name (ผู้รายงาน) <span className="text-rose-500">*</span></span>
                       </label>
-                      <input 
-                        type="text" 
-                        value={reporterName}
-                        onChange={(e) => setReporterName(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600" 
-                        placeholder="กรุณากรอกชื่อบำรุงรักษา"
-                      />
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          required
+                          value={reporterName}
+                          onChange={(e) => setReporterName(e.target.value)}
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600" 
+                          placeholder="กรุณากรอกชื่อผู้รายงาน"
+                        />
+                        {liffInitialized && !liff.isLoggedIn() && (
+                          <button
+                            type="button"
+                            onClick={() => liff.login()}
+                            className="bg-[#06C755] hover:bg-[#05b04b] text-white font-extrabold text-[11px] px-4 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 font-sans"
+                          >
+                            <span>ดึงชื่อจาก LINE</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Input: Drag & Drop Screen attachment */}
@@ -1470,6 +1498,10 @@ export default function App() {
                         <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
                           <strong>LINE_LIFF_URL</strong><br />
                           (ไม่บังคับ) ลิงก์ LIFF เพื่อเปิดหน้าจอ Webview ในแอปไลน์
+                        </div>
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
+                          <strong>LINE_LIFF_ID</strong><br />
+                          รหัส ID ของ LINE LIFF App เพื่อดึงโปรไฟล์
                         </div>
                         <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2">
                           <strong>FIREBASE_CLIENT_EMAIL & PRIVATE_KEY</strong><br />

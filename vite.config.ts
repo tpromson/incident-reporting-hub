@@ -155,7 +155,8 @@ export default defineConfig(() => {
             } else if (req.url === '/api/config') {
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({
-                googleSheetId: process.env.GOOGLE_SHEET_ID || '1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI'
+                googleSheetId: process.env.GOOGLE_SHEET_ID || '1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI',
+                liffId: process.env.LINE_LIFF_ID || ''
               }));
             } else if (req.url === '/api/admin/verify') {
               res.setHeader('Content-Type', 'application/json');

@@ -155,7 +155,8 @@ app.delete('/api/incidents/:id', async (req, res) => {
 // GET configuration (e.g. Google Sheets ID)
 app.get('/api/config', (req, res) => {
   res.json({
-    googleSheetId: process.env.GOOGLE_SHEET_ID || '1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI'
+    googleSheetId: process.env.GOOGLE_SHEET_ID || '1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI',
+    liffId: process.env.LINE_LIFF_ID || ''
   });
 });
 
