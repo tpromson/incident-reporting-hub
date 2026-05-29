@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
-import { getIncidents, saveIncidents, analyzeIncidentIssue } from './src/api';
+import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate } from './src/api';
 
 export default defineConfig(() => {
   return {
@@ -60,6 +60,7 @@ export default defineConfig(() => {
 
                       incidents.unshift(newIncident);
                       await saveIncidents(incidents);
+                      pushLineNotification(newIncident); // Push to LINE
                       res.statusCode = 201;
                       res.end(JSON.stringify(newIncident));
                     } catch (innerErr: any) {
@@ -92,6 +93,7 @@ export default defineConfig(() => {
                       resolutionNote: payload.resolutionNote !== undefined ? payload.resolutionNote : incidents[idx].resolutionNote
                     };
                     await saveIncidents(incidents);
+                    pushLineStatusUpdate(id, payload.status || incidents[idx].status, payload.resolutionNote || '');
                     res.end(JSON.stringify(incidents[idx]));
                   } catch (innerErr: any) {
                     res.statusCode = 400;
@@ -126,6 +128,58 @@ export default defineConfig(() => {
                     const payload = body ? JSON.parse(body) : {};
                     const result = await analyzeIncidentIssue(payload.description, payload.sensorName);
                     res.end(JSON.stringify(result));
+                  } catch (e: any) {
+                    res.statusCode = 500;
+                    res.end(JSON.stringify({ error: e.message }));
+                  }
+                });
+              } else {
+                res.statusCode = 405;
+                res.end(JSON.stringify({ error: 'Method not allowed' }));
+              }
+            } else if (req.url?.startsWith('/api/line/webhook')) {
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => { body += chunk; });
+                req.on('end', async () => {
+                  try {
+                    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+                    if (!token || token === "your-line-channel-access-token") {
+                      res.statusCode = 500;
+                      res.end(JSON.stringify({ error: "LINE Channel Access Token is not configured" }));
+                      return;
+                    }
+                    const payload = body ? JSON.parse(body) : {};
+                    const events = payload.events || [];
+                    for (const event of events) {
+                      if (event.type === 'message' && event.message.type === 'text') {
+                        const replyToken = event.replyToken;
+                        const userText = event.message.text.trim().toLowerCase();
+                        let replyText = "สวัสดีครับ! ยินดีต้อนรับสู่ระบบแจ้งบำรุงผ่าน LINE OA หากระบบหรือเซ็นเซอร์ขัดข้อง สามารถรายงานได้ทันทีผ่าน Webview (LIFT) ของระบบครับ";
+
+                        if (userText.includes('แจ้ง') || userText.includes('พัง') || userText.includes('เสีย') || userText.includes('repair')) {
+                          replyText = `📍 ต้องการรายงานปัญหาใช่หรือไม่ครับ?\nคุณสามารถเปิดแบบฟอร์มรายงานเพื่อแจ้งอาการเสียร่วมกับการวิเคราะห์ด้วย AI ได้ทันทีที่ลิงก์นี้ครับ:\nhttp://localhost:3000/`;
+                        } else if (userText.includes('สถานะ') || userText.includes('status')) {
+                          const incidents = await getIncidents();
+                          const pending = incidents.filter(i => i.status !== 'Resolved').length;
+                          replyText = `📊 รายงานสรุปสถานะอุปกรณ์ล่าสุด:\n- เคสที่ค้างคา: ${pending} เคส\n- เคสที่แก้ไขแล้ว: ${incidents.filter(i => i.status === 'Resolved').length} เคส\nตรวจสอบประวัติทั้งหมดได้ที่แผงควบคุมหลักครับ!`;
+                        }
+
+                        await fetch("https://api.line.me/v2/bot/message/reply", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            replyToken: replyToken,
+                            messages: [{ type: "text", text: replyText }]
+                          })
+                        });
+                      }
+                    }
+                    res.end(JSON.stringify({ success: true }));
                   } catch (e: any) {
                     res.statusCode = 500;
                     res.end(JSON.stringify({ error: e.message }));

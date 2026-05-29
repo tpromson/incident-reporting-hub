@@ -263,3 +263,164 @@ function getFallbackAIAnalysis(description: string, sensorName: string) {
 
   return { cause, riskLevel, actionPlan };
 }
+
+// Push incident report to LINE group via Messaging API
+export async function pushLineNotification(incident: IncidentReport): Promise<void> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const targetId = process.env.LINE_TARGET_ID;
+
+  if (!token || !targetId || token === "your-line-channel-access-token" || targetId === "your-line-target-id") {
+    console.log("[LINE API] Notification skipped. Credentials not configured.");
+    return;
+  }
+
+  try {
+    const payload = {
+      to: targetId,
+      messages: [
+        {
+          type: "flex",
+          altText: `🚨 แจ้งเหตุระบบขัดข้อง [${incident.id}]`,
+          contents: {
+            type: "bubble",
+            hero: {
+              type: "image",
+              url: "https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6",
+              size: "full",
+              aspectRatio: "20:9",
+              aspectMode: "cover"
+            },
+            body: {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                {
+                  type: "text",
+                  text: `🚨 แจ้งเหตุระบบขัดข้อง [${incident.id}]`,
+                  weight: "bold",
+                  size: "md",
+                  color: incident.urgency === 'High' ? "#e11d48" : incident.urgency === 'Medium' ? "#d97706" : "#0d9488"
+                },
+                {
+                  type: "box",
+                  layout: "vertical",
+                  margin: "md",
+                  spacing: "xs",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "baseline",
+                      spacing: "sm",
+                      contents: [
+                        { type: "text", text: "อุปกรณ์", color: "#aaaaaa", size: "xs", flex: 2 },
+                        { type: "text", text: incident.sensorName, wrap: true, color: "#444444", size: "xs", flex: 5, weight: "bold" }
+                      ]
+                    },
+                    {
+                      type: "box",
+                      layout: "baseline",
+                      spacing: "sm",
+                      contents: [
+                        { type: "text", text: "ความด่วน", color: "#aaaaaa", size: "xs", flex: 2 },
+                        { type: "text", text: incident.urgency, wrap: true, color: incident.urgency === 'High' ? "#e11d48" : "#d97706", size: "xs", flex: 5, weight: "bold" }
+                      ]
+                    },
+                    {
+                      type: "box",
+                      layout: "baseline",
+                      spacing: "sm",
+                      contents: [
+                        { type: "text", text: "ผู้รายงาน", color: "#aaaaaa", size: "xs", flex: 2 },
+                        { type: "text", text: incident.reporterName, wrap: true, color: "#444444", size: "xs", flex: 5 }
+                      ]
+                    },
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      margin: "sm",
+                      contents: [
+                        { type: "text", text: "รายละเอียดความชำรุด:", color: "#aaaaaa", size: "xs", weight: "bold" },
+                        { type: "text", text: incident.description, wrap: true, color: "#333333", size: "xs", margin: "xs" }
+                      ]
+                    },
+                    incident.aiAnalysis ? {
+                      type: "box",
+                      layout: "vertical",
+                      margin: "md",
+                      backgroundColor: "#f5f3ff",
+                      paddingAll: "10px",
+                      cornerRadius: "md",
+                      contents: [
+                        { type: "text", text: "🔍 ผลวิเคราะห์จาก Gemini AI:", color: "#6366f1", size: "xs", weight: "bold" },
+                        { type: "text", text: `สาเหตุ: ${incident.aiAnalysis.cause || "-"}`, wrap: true, color: "#4338ca", size: "xs", margin: "xs", weight: "bold" },
+                        { type: "text", text: `แผนแก้ไข:\n${incident.aiAnalysis.actionPlan || "-"}`, wrap: true, color: "#4b5563", size: "xs", margin: "xs" }
+                      ]
+                    } : { type: "spacer", size: "xs" }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    };
+
+    const response = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+      console.log(`[LINE API] Flex message successfully pushed to target: ${targetId}`);
+    } else {
+      const errText = await response.text();
+      console.error(`[LINE API] Failed to push message: ${response.status} - ${errText}`);
+    }
+  } catch (error) {
+    console.error("[LINE API] Error calling push message API:", error);
+  }
+}
+
+// Push incident status updates to LINE group via Messaging API
+export async function pushLineStatusUpdate(incidentId: string, status: string, note: string): Promise<void> {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  const targetId = process.env.LINE_TARGET_ID;
+
+  if (!token || !targetId || token === "your-line-channel-access-token" || targetId === "your-line-target-id") {
+    return;
+  }
+
+  try {
+    const textMessage = `🔧 อัพเดทสถานะเคส [${incidentId}] -> ✅ *${status}*\nบันทึกการแก้ไข: ${note || '-'}`;
+    
+    const response = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        to: targetId,
+        messages: [
+          {
+            type: "text",
+            text: textMessage
+          }
+        ]
+      })
+    });
+
+    if (response.ok) {
+      console.log(`[LINE API] Status update successfully pushed to target: ${targetId}`);
+    } else {
+      const errText = await response.text();
+      console.error(`[LINE API] Failed to push status update: ${response.status} - ${errText}`);
+    }
+  } catch (error) {
+    console.error("[LINE API] Error calling status update push API:", error);
+  }
+}
