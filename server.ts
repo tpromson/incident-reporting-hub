@@ -159,6 +159,17 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// POST verify admin passcode
+app.post('/api/admin/verify', (req, res) => {
+  const { password } = req.body;
+  const adminPassword = process.env.ADMIN_PASSWORD || '1234';
+  if (password === adminPassword) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, error: "รหัสผ่านไม่ถูกต้อง" });
+  }
+});
+
 // POST LINE Webhook
 app.post('/api/line/webhook', async (req, res) => {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -176,7 +187,8 @@ app.post('/api/line/webhook', async (req, res) => {
         let replyText = "สวัสดีครับ! ยินดีต้อนรับสู่ระบบแจ้งบำรุงผ่าน LINE OA หากระบบหรือเซ็นเซอร์ขัดข้อง สามารถรายงานได้ทันทีผ่าน Webview (LIFT) ของระบบครับ";
 
         if (userText.includes('แจ้ง') || userText.includes('พัง') || userText.includes('เสีย') || userText.includes('repair')) {
-          replyText = `📍 ต้องการรายงานปัญหาใช่หรือไม่ครับ?\nคุณสามารถเปิดแบบฟอร์มรายงานเพื่อแจ้งอาการเสียร่วมกับการวิเคราะห์ด้วย AI ได้ทันทีที่ลิงก์นี้ครับ:\n${req.protocol}://${req.get('host')}/`;
+          const liffUrl = process.env.LINE_LIFF_URL || `${req.protocol}://${req.get('host')}/`;
+          replyText = `📍 ต้องการรายงานปัญหาใช่หรือไม่ครับ?\nคุณสามารถเปิดแบบฟอร์มรายงานเพื่อแจ้งอาการเสียร่วมกับการวิเคราะห์ด้วย AI ได้ทันทีที่ลิงก์นี้ครับ:\n${liffUrl}`;
         } else if (userText.includes('สถานะ') || userText.includes('status')) {
           const incidents = await getIncidents();
           const pending = incidents.filter(i => i.status !== 'Resolved').length;

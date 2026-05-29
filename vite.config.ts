@@ -157,6 +157,30 @@ export default defineConfig(() => {
               res.end(JSON.stringify({
                 googleSheetId: process.env.GOOGLE_SHEET_ID || '1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI'
               }));
+            } else if (req.url === '/api/admin/verify') {
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => { body += chunk; });
+                req.on('end', () => {
+                  try {
+                    const payload = body ? JSON.parse(body) : {};
+                    const adminPassword = process.env.ADMIN_PASSWORD || '1234';
+                    if (payload.password === adminPassword) {
+                      res.end(JSON.stringify({ success: true }));
+                    } else {
+                      res.statusCode = 401;
+                      res.end(JSON.stringify({ success: false, error: "รหัสผ่านไม่ถูกต้อง" }));
+                    }
+                  } catch (e: any) {
+                    res.statusCode = 400;
+                    res.end(JSON.stringify({ error: e.message }));
+                  }
+                });
+              } else {
+                res.statusCode = 405;
+                res.end(JSON.stringify({ error: 'Method not allowed' }));
+              }
             } else if (req.url?.startsWith('/api/line/webhook')) {
               res.setHeader('Content-Type', 'application/json');
               if (req.method === 'POST') {
@@ -180,7 +204,8 @@ export default defineConfig(() => {
                         let replyText = "สวัสดีครับ! ยินดีต้อนรับสู่ระบบแจ้งบำรุงผ่าน LINE OA หากระบบหรือเซ็นเซอร์ขัดข้อง สามารถรายงานได้ทันทีผ่าน Webview (LIFT) ของระบบครับ";
 
                         if (userText.includes('แจ้ง') || userText.includes('พัง') || userText.includes('เสีย') || userText.includes('repair')) {
-                          replyText = `📍 ต้องการรายงานปัญหาใช่หรือไม่ครับ?\nคุณสามารถเปิดแบบฟอร์มรายงานเพื่อแจ้งอาการเสียร่วมกับการวิเคราะห์ด้วย AI ได้ทันทีที่ลิงก์นี้ครับ:\nhttp://localhost:3000/`;
+                          const liffUrl = process.env.LINE_LIFF_URL || `http://localhost:3000/`;
+                          replyText = `📍 ต้องการรายงานปัญหาใช่หรือไม่ครับ?\nคุณสามารถเปิดแบบฟอร์มรายงานเพื่อแจ้งอาการเสียร่วมกับการวิเคราะห์ด้วย AI ได้ทันทีที่ลิงก์นี้ครับ:\n${liffUrl}`;
                         } else if (userText.includes('สถานะ') || userText.includes('status')) {
                           const incidents = await getIncidents();
                           const pending = incidents.filter(i => i.status !== 'Resolved').length;

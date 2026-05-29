@@ -43,7 +43,28 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isLIFTMode, setIsLIFTMode] = useState(false); // Simulated LINE webview container toggle
-  const [userRole, setUserRole] = useState<'user' | 'admin'>('admin'); // Role control state
+  const [userRole, setUserRole] = useState<'user' | 'admin'>(() => {
+    return sessionStorage.getItem('isAdminAuthenticated') === 'true' ? 'admin' : 'user';
+  });
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [verifyingAuth, setVerifyingAuth] = useState(false);
+
+  const handleRoleChange = async (role: 'user' | 'admin') => {
+    if (role === 'user') {
+      sessionStorage.removeItem('isAdminAuthenticated');
+      setUserRole('user');
+    } else {
+      if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
+        setUserRole('admin');
+      } else {
+        setPasscode('');
+        setAuthError('');
+        setShowAuthModal(true);
+      }
+    }
+  };
 
   // Form State
   const [selectedSensorId, setSelectedSensorId] = useState('SN-2045');
@@ -503,7 +524,7 @@ export default function App() {
               value={userRole}
               onChange={(e) => {
                 const role = e.target.value as 'user' | 'admin';
-                setUserRole(role);
+                handleRoleChange(role);
               }}
               className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-none cursor-pointer pr-1"
             >
@@ -1575,6 +1596,89 @@ export default function App() {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Admin Authentication Passcode Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-xs">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-sm w-full overflow-hidden shadow-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+                🔒 ป้อนรหัสผ่านผู้ดูแลระบบ (Admin)
+              </h3>
+              <button 
+                onClick={() => setShowAuthModal(false)}
+                className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!passcode) {
+                setAuthError("กรุณากรอกรหัสผ่านครับ");
+                return;
+              }
+              setVerifyingAuth(true);
+              setAuthError('');
+              try {
+                const response = await fetch('/api/admin/verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ password: passcode })
+                });
+                if (response.ok) {
+                  sessionStorage.setItem('isAdminAuthenticated', 'true');
+                  setUserRole('admin');
+                  setShowAuthModal(false);
+                } else {
+                  const errData = await response.json();
+                  setAuthError(errData.error || "รหัสผ่านไม่ถูกต้อง");
+                }
+              } catch (err) {
+                setAuthError("เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์");
+              } finally {
+                setVerifyingAuth(false);
+              }
+            }} className="space-y-4">
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-left">Passcode / รหัสผ่าน</p>
+                <input 
+                  type="password"
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-center font-bold tracking-widest"
+                  placeholder="••••"
+                  autoFocus
+                />
+                {authError && (
+                  <p className="text-[10px] font-bold text-rose-600 text-center mt-1">{authError}</p>
+                )}
+                <p className="text-[9px] text-slate-400 text-center mt-2 leading-relaxed">
+                  (รหัสผ่านเริ่มต้นสำหรับทดสอบระบบคือ <strong>1234</strong>)
+                </p>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setShowAuthModal(false)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button 
+                  type="submit"
+                  disabled={verifyingAuth}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-100 cursor-pointer disabled:opacity-50"
+                >
+                  {verifyingAuth ? "กำลังตรวจสอบ..." : "ยืนยันรหัสผ่าน"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
