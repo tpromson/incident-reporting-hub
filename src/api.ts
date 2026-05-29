@@ -424,3 +424,39 @@ export async function pushLineStatusUpdate(incidentId: string, status: string, n
     console.error("[LINE API] Error calling status update push API:", error);
   }
 }
+
+// Sync incident report to Google Sheets via Apps Script Webhook
+export async function pushToGoogleSheet(incident: IncidentReport): Promise<void> {
+  const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL;
+  if (!webhookUrl || webhookUrl === "your-google-sheet-webhook-url" || webhookUrl === "") {
+    return;
+  }
+
+  try {
+    const payload = {
+      id: incident.id,
+      sensorId: incident.sensorId,
+      sensorName: incident.sensorName,
+      urgency: incident.urgency,
+      description: incident.description,
+      reporterName: incident.reporterName,
+      aiDiagnostic: incident.aiAnalysis ? `สาเหตุ: ${incident.aiAnalysis.cause}\nแผนแก้ไข:\n${incident.aiAnalysis.actionPlan}` : "ไม่มีการวิเคราะห์"
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+      console.log("[Google Sheet] Report successfully pushed to sheet webhook.");
+    } else {
+      console.error(`[Google Sheet] Failed to push data to sheet: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("[Google Sheet] Error sending request to webhook:", error);
+  }
+}

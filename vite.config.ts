@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
-import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate } from './src/api';
+import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate, pushToGoogleSheet } from './src/api';
 
 export default defineConfig(() => {
   return {
@@ -61,6 +61,7 @@ export default defineConfig(() => {
                       incidents.unshift(newIncident);
                       await saveIncidents(incidents);
                       pushLineNotification(newIncident); // Push to LINE
+                      pushToGoogleSheet(newIncident); // Sync with Google Sheets
                       res.statusCode = 201;
                       res.end(JSON.stringify(newIncident));
                     } catch (innerErr: any) {

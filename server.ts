@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate } from './src/api.js';
+import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate, pushToGoogleSheet } from './src/api.js';
 import { IncidentReport } from './src/types.js';
 
 // Load environment variables
@@ -74,6 +74,7 @@ app.post('/api/incidents', async (req, res) => {
     incidents.unshift(newIncident); // prepend new ones
     await saveIncidents(incidents);
     pushLineNotification(newIncident); // Alert maintenance group
+    pushToGoogleSheet(newIncident); // Sync with Google Sheets
     
     res.status(201).json(newIncident);
   } catch (err: any) {
