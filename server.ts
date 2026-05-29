@@ -84,8 +84,15 @@ app.post('/api/incidents', async (req, res) => {
 
     incidents.unshift(newIncident); // prepend new ones
     await saveIncidents(incidents);
-    pushLineNotification(newIncident); // Alert maintenance group
-    pushToGoogleSheet(newIncident); // Sync with Google Sheets
+    // Await background integrations for serverless execution stability on Vercel
+    try {
+      await Promise.all([
+        pushLineNotification(newIncident).catch(e => console.error("[LINE alert error]:", e)),
+        pushToGoogleSheet(newIncident).catch(e => console.error("[Google Sheets sync error]:", e))
+      ]);
+    } catch (e) {
+      console.error("Integration error:", e);
+    }
     
     res.status(201).json(newIncident);
   } catch (err: any) {
@@ -126,7 +133,11 @@ app.put('/api/incidents/:id', async (req, res) => {
     };
     
     await saveIncidents(incidents);
-    pushLineStatusUpdate(id, status || incidents[idx].status, resolutionNote || '');
+    try {
+      await pushLineStatusUpdate(id, status || incidents[idx].status, resolutionNote || '').catch(e => console.error("[LINE status update error]:", e));
+    } catch (e) {
+      console.error("LINE status alert error:", e);
+    }
     res.json(incidents[idx]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

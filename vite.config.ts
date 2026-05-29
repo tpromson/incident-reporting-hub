@@ -60,8 +60,15 @@ export default defineConfig(() => {
 
                       incidents.unshift(newIncident);
                       await saveIncidents(incidents);
-                      pushLineNotification(newIncident); // Push to LINE
-                      pushToGoogleSheet(newIncident); // Sync with Google Sheets
+                      // Await background integrations for serverless execution stability on Vercel
+                      try {
+                        await Promise.all([
+                          pushLineNotification(newIncident).catch(e => console.error("[LINE alert error]:", e)),
+                          pushToGoogleSheet(newIncident).catch(e => console.error("[Google Sheets sync error]:", e))
+                        ]);
+                      } catch (e) {
+                        console.error("Integration error:", e);
+                      }
                       res.statusCode = 201;
                       res.end(JSON.stringify(newIncident));
                     } catch (innerErr: any) {
@@ -94,7 +101,11 @@ export default defineConfig(() => {
                       resolutionNote: payload.resolutionNote !== undefined ? payload.resolutionNote : incidents[idx].resolutionNote
                     };
                     await saveIncidents(incidents);
-                    pushLineStatusUpdate(id, payload.status || incidents[idx].status, payload.resolutionNote || '');
+                    try {
+                      await pushLineStatusUpdate(id, payload.status || incidents[idx].status, payload.resolutionNote || '').catch(e => console.error("[LINE status update error]:", e));
+                    } catch (e) {
+                      console.error("LINE status alert error:", e);
+                    }
                     res.end(JSON.stringify(incidents[idx]));
                   } catch (innerErr: any) {
                     res.statusCode = 400;
