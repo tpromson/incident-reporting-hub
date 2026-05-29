@@ -1,0 +1,265 @@
+import fs from 'fs';
+import path from 'path';
+import admin from 'firebase-admin';
+import { GoogleGenAI, Type } from '@google/genai';
+import { IncidentReport } from './types.js';
+
+// Path for persistent storage
+const DATA_DIR = path.resolve('./data');
+const DATA_FILE = path.join(DATA_DIR, 'incidents.json');
+
+// Initial template incidents to populate if no file exists
+const INITIAL_INCIDENTS: IncidentReport[] = [
+  {
+    id: "INC-2026-001",
+    timestamp: "2026-05-28T14:20:00Z",
+    sensorId: "SN-3112",
+    sensorName: "SN-3112 - Thermal Regulator",
+    urgency: "High",
+    description: "หน้าจอร้อนจัดเกิน 85 องศาเซลเซียส และระบบตัดการทำงานหลักขัดข้อง มีกลิ่นไหม้อ่อนๆ",
+    reporterName: "Chakrit_Admin",
+    status: "Resolved",
+    resolutionNote: "ช่างวิศวกรรีเซ็ตระบบระบายความร้อนและเปลี่ยนแผงควบคุมไฟสำรองหลักเรียบร้อยแล้วเมื่อวานนี้เวลา 16:30 น.",
+    aiAnalysis: {
+      cause: "หม้อแปลงวงจรจ่ายไฟสำรองชำรุดเสียหายจากไฟฟ้าเกินขนาด",
+      riskLevel: "Critical Safety Risk",
+      actionPlan: "1. ตัดแหล่งจ่ายกระแสไฟสำรองภายนอก\n2. เข้าตรวจสอบตัวระบายความร้อนภายนอกและแผงจงจรหลักด้วยขั้ววัดอุณหภูมิอินฟราเรด\n3. เปลี่ยนตัวปรับแรงดันไฟ (Voltage Regulator)\n4. ทดสอบโหลดและเปิดระบบใหม่อีกครั้ง"
+    }
+  },
+  {
+    id: "INC-2026-002",
+    timestamp: "2026-05-29T00:45:00Z",
+    sensorId: "SN-2045",
+    sensorName: "SN-2045 - Central Humidity Sensor",
+    urgency: "Medium",
+    description: "ค่าความชื้นทะลุ 95% RH ตลอด 4 ชั่วโมงที่ผ่านมา แต่ตรวจสอบภายนอกห้องเครื่องไม่มีความผิดปกติ น่าจะเกิดจากเซ็นเซอร์ชำรุดหรือสายสลัดหัวสแกนหลุด",
+    reporterName: "Somchai_Mech",
+    status: "Pending",
+    aiAnalysis: {
+      cause: "เซ็นเซอร์สัมผัสความชื้นเสื่อมสภาพหรือมีหยดน้ำเกาะติดแน่นที่หัวสแกน (Condensation)",
+      riskLevel: "Medium Operational Risk",
+      actionPlan: "1. ให้เจ้าหน้าที่ช่างบำรุงรักษาถอดครอบครอบเซ็นเซอร์ออกและทำความสะอาดด้วยแอลกอฮอล์\n2. เป่าแห้งเซ็นเซอร์ด้วยลมสะอาดแรงดันต่ำ\n3. หากสายต่อนำสัญญาณชำรุด ให้เข้าหัวเชื่อมใหม่\n4. เปรียบเทียบค่าอ่านจริงกับเครื่องมือเปรียบเทียบแบบพกพา"
+    }
+  }
+];
+
+// Memory fallback storage
+let memoryIncidents: IncidentReport[] = [...INITIAL_INCIDENTS];
+
+// Initialize Firebase Admin
+let db: admin.firestore.Firestore | null = null;
+let isFirebaseInitialized = false;
+
+try {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (projectId && clientEmail && privateKey) {
+    // If the private key contains escaped literal '\n' characters, format them correctly
+    privateKey = privateKey.replace(/\\n/g, '\n');
+    
+    if (admin.apps.length === 0) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
+      });
+    }
+    db = admin.firestore();
+    isFirebaseInitialized = true;
+    console.log("[Firebase Admin] Connected to Firestore successfully.");
+  } else {
+    console.log("[Firebase Admin] Config missing. Falling back to local file/memory.");
+  }
+} catch (error) {
+  console.error("Failed to initialize Firebase Admin, using local file/memory fallback:", error);
+}
+
+// Helper to ensure data directory and file exist
+export function initDataStorage() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(DATA_FILE)) {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(INITIAL_INCIDENTS, null, 2), 'utf-8');
+    }
+  } catch (error) {
+    // Write error (like EROFS in serverless environments). Safe to catch silently.
+  }
+}
+
+// Get all incidents (async)
+export async function getIncidents(): Promise<IncidentReport[]> {
+  if (isFirebaseInitialized && db) {
+    try {
+      const snapshot = await db.collection('incidents').orderBy('timestamp', 'desc').get();
+      const docs = snapshot.docs.map(doc => doc.data() as IncidentReport);
+      
+      // If collection is completely empty, seed it with INITIAL_INCIDENTS
+      if (docs.length === 0) {
+        console.log("[Firebase Admin] Seeding initial incidents to Firestore.");
+        await saveIncidents(INITIAL_INCIDENTS);
+        return INITIAL_INCIDENTS;
+      }
+      return docs;
+    } catch (error) {
+      console.error("Error reading from Firestore, falling back to local file/memory:", error);
+    }
+  }
+
+  // Local File / Memory Fallback
+  initDataStorage();
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      const data = JSON.parse(raw) as IncidentReport[];
+      memoryIncidents = data;
+      return data;
+    }
+  } catch (error) {
+    console.warn("Failed to read local data file, using in-memory store:", error);
+  }
+  return memoryIncidents;
+}
+
+// Save all incidents (async)
+export async function saveIncidents(incidents: IncidentReport[]): Promise<void> {
+  if (isFirebaseInitialized && db) {
+    try {
+      const snapshot = await db.collection('incidents').get();
+      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
+      const inputIds = new Set(incidents.map(inc => inc.id));
+      
+      const batch = db.batch();
+      
+      // Add or update
+      for (const inc of incidents) {
+        const docRef = db.collection('incidents').doc(inc.id);
+        batch.set(docRef, inc, { merge: true });
+      }
+      
+      // Delete removed
+      for (const doc of snapshot.docs) {
+        if (!inputIds.has(doc.id)) {
+          batch.delete(doc.ref);
+        }
+      }
+      
+      await batch.commit();
+      return;
+    } catch (error) {
+      console.error("Error writing to Firestore, falling back to local file/memory:", error);
+    }
+  }
+
+  // Local File / Memory Fallback
+  memoryIncidents = incidents;
+  try {
+    initDataStorage();
+    fs.writeFileSync(DATA_FILE, JSON.stringify(incidents, null, 2), 'utf-8');
+  } catch (error) {
+    // local write failed (EROFS on Vercel), but state is updated in memoryIncidents
+  }
+}
+
+// Gemini API instance initialization helper
+export function getGeminiClient(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+    console.warn("WARNING: GEMINI_API_KEY is not configured or uses placeholder value. AI analysis will run in fallback simulation mode.");
+    return null;
+  }
+  return new GoogleGenAI({
+    apiKey: apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
+}
+
+// Call Gemini 3.5 Flash to analyze incident report and provide insights
+export async function analyzeIncidentIssue(description: string, sensorName: string): Promise<{ cause: string, riskLevel: string, actionPlan: string }> {
+  const ai = getGeminiClient();
+  
+  if (!ai) {
+    // Return high-fidelity mock AI results in Thai if Gemini API Key not present
+    return getFallbackAIAnalysis(description, sensorName);
+  }
+
+  try {
+    const prompt = `คุณคือผู้เชี่ยวชาญด้านอุปกรณ์ IoT, SCADA, ระบบโรงงาน และเซ็นเซอร์อัจฉริยะ (Industrial IoT Engineer)
+กรุณาวิเคราะห์ปัญหาของอุปกรณ์ที่รายงานเข้ามาด้านล่างนี้ และสร้างข้อมูลวิเคราะห์ในรูปแบบ JSON
+รายละเอียดปัญหา:
+ชื่อชุดอุปกรณ์/เซ็นเซอร์: "${sensorName}"
+อาการที่พบ: "${description}"
+
+กรุณาตอบกลับในรูปแบบ JSON วัตถุเพียงอย่างเดียวที่มีโครงสร้างดังนี้ (อย่าใส่เครื่องหมาย markdown ครอบ เช่น \`\`\`json):
+{
+  "cause": "สาเหตุที่น่าจะเกิดขึ้นมากที่สุด (อธิบายสั้นๆ กระชับ เป็นภาษาไทย)",
+  "riskLevel": "ระดับความเสี่ยงทางการแพทย์/ความปลอดภัย หรือผลกระทบต่อสิ่งแวดล้อมและผลผลิต (เช่น High Operational Risk, Critical Safety Risk, Low Environmental Risk)",
+  "actionPlan": "แผนปฏิบัติการให้ช่างเทคนิคดำเนินการตรวจสอบและแก้ไข (ระบุเป็นรายการ 1, 2, 3, 4 สั้นๆ ชัดเจน เข้าใจง่าย ภาษาไทย)"
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            cause: { type: Type.STRING, description: "Most likely cause of the issue in Thai" },
+            riskLevel: { type: Type.STRING, description: "Risk level assessment label" },
+            actionPlan: { type: Type.STRING, description: "Numbered list of actionable steps for technicians in Thai" }
+          },
+          required: ["cause", "riskLevel", "actionPlan"]
+        }
+      }
+    });
+
+    const responseText = response.text ? response.text.trim() : "";
+    if (responseText) {
+      const parsed = JSON.parse(responseText);
+      return {
+        cause: parsed.cause || "ไม่สามารถวิเคราะห์สาเหตุได้แน่ชัด",
+        riskLevel: parsed.riskLevel || "Medium Risk",
+        actionPlan: parsed.actionPlan || "1. กรุณาเข้าตรวจสอบอุปกรณ์ที่หน้างานโดยด่วน"
+      };
+    }
+    throw new Error("Empty response from GenAI");
+  } catch (error) {
+    console.error("Failed to analyze with Gemini, falling back to heuristic mock analyzer:", error);
+    return getFallbackAIAnalysis(description, sensorName);
+  }
+}
+
+// Fallback high quality heuristic solver
+function getFallbackAIAnalysis(description: string, sensorName: string) {
+  let cause = "ตรวจพบลักษณะสัญญาณขัดข้องทางกระแสไฟหรือขั้วสัมผัสหลวม";
+  let riskLevel = "Medium Operational Impact";
+  let actionPlan = "1. ดำเนินการตัดระบบไฟฟ้าหลักที่จ่ายเข้าอุปกรณ์\n2. ตรวจสอบขั้วนำสายไฟและขั้วสัมผัสต่อนำสัญญาณทั้งหมดว่าขาด/หลวมหรือไม่\n3. ทำความสะอาดขั้วด้วย Contact Cleaner\n4. เสียบจ่ายไฟเพื่อเช็คความต้านทานกระแสไฟ";
+
+  const lowerDesc = description.toLowerCase();
+  
+  if (lowerDesc.includes("ความชื้น") || lowerDesc.includes("humidity") || sensorName.includes("Humidity")) {
+    cause = "คอนเดนเซชั่นเนื่องจากความชื้นสูงเกินไป หรือหัวเซ็นเซอร์อิ่มตัวด้วยหยดน้ำ";
+    riskLevel = "Medium Environmental Risk";
+    actionPlan = "1. ตรวจสอบสภาพทางกายภาพเพื่อหาละอองน้ำหรือจุดรั่วไหลของน้ำใกล้อุปกรณ์\n2. ถอดฝาครอบกรองอากาศของหัวเซ็นเซอร์ออกเพื่อระบายอากาศ\n3. ทำความสะอาดสิ่งสกปรกและเช็ดเป่าสลับชิ้นงานทดสอบอสังหาริมทรัพย์\n4. ปรับตั้งค่าสอบเทียบค่าศูนย์ (Zero Calibration) ใหม่";
+  } else if (lowerDesc.includes("ร้อน") || lowerDesc.includes("ไหม้") || lowerDesc.includes("อุณหภูมิ") || lowerDesc.includes("temperature") || sensorName.includes("Thermal") || sensorName.includes("Temp")) {
+    cause = "ระบบหมุนเวียนระบายความร้อนขัดข้อง หรือกระแสไฟเกินขีดจำกัดสูงสุดทำให้เกิดความร้อนสะสมระแวกขดลวด";
+    riskLevel = "Critical Fire & Safety Risk";
+    actionPlan = "1. ประกาศหยุดการทำงานของอุปกรณ์ชุดนี้ทันทีเพื่อลดความร้อนสะสม\n2. ตรวจเช็คการทำงานของพัดลมเป่าระบายความร้อนและตะแกรงดักจับฝุ่น\n3. ใช้กล้องอินฟราเรดถ่ายตรวจจับความร้อนแผงบอร์ดควบคุมแผ่อัลกอลิทึม\n4. เปลี่ยนฟิวส์ต้านทานตัดกระแสเกินหากพบการละลายชำรุด";
+  } else if (lowerDesc.includes("ดึง") || lowerDesc.includes("หลุด") || lowerDesc.includes("สาย") || lowerDesc.includes("หน้าจอ") || lowerDesc.includes("ดับ")) {
+    cause = "เกิดการตัดการเชื่อมต่อสัญญาณโครงข่ายไฟฟ้าสำรอง หรือสายส่งข้อมูล (RS485/Modbus) ชำรุด";
+    riskLevel = "High Data Loss Risk";
+    actionPlan = "1. ขันล็อกขั้วสายสื่อสารเข้ากับบล็อก RJ45 หรือช่องเสียบอนาล็อกให้แน่นหนาขึ้น\n2. ตรวจวัดค่าความต้านทานและแรงดันระหว่างพอร์ตเพื่อตรวจสอบสายขาดใน\n3. ทดลองรีสตาร์ทตัวเครื่องบันทึกเกตเวย์ (Gateway Node)\n4. ทดสอบส่งตรวจสอบการเชื่อมต่อ (Ping) กลับมายังส่วนแสดงผลกลาง";
+  }
+
+  return { cause, riskLevel, actionPlan };
+}

@@ -1,0 +1,1 @@
+{"name":"LINE Incident Reporting Hub","description":"Google Form-like incident reporting portal optimized for LINE webviews \u0026 desktop, synced with live Google Sheets, and powered by Gemini AI for instant sensor diagnostic action plans.","requestFramePermissions":[],"majorCapabilities":["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]}

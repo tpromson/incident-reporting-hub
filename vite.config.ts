@@ -1,0 +1,155 @@
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import {defineConfig} from 'vite';
+import { getIncidents, saveIncidents, analyzeIncidentIssue } from './src/api';
+
+export default defineConfig(() => {
+  return {
+    plugins: [
+      react(), 
+      tailwindcss(),
+      {
+        name: 'api-server-dev',
+        configureServer(server) {
+          server.middlewares.use(async (req, res, next) => {
+            if (req.url && (req.url.startsWith('/api/incidents') || req.url.includes('/api/incidents/'))) {
+              res.setHeader('Content-Type', 'application/json');
+              const url = new URL(req.url, 'http://localhost');
+              const method = req.method;
+
+              if (method === 'GET') {
+                try {
+                  const data = await getIncidents();
+                  res.end(JSON.stringify(data));
+                } catch (e: any) {
+                  res.statusCode = 500;
+                  res.end(JSON.stringify({ error: e.message }));
+                }
+              } else if (method === 'POST') {
+                try {
+                  let body = '';
+                  req.on('data', chunk => { body += chunk; });
+                  req.on('end', async () => {
+                    try {
+                      const payload = body ? JSON.parse(body) : {};
+                      const incidents = await getIncidents();
+                      
+                      let aiAnalysis = undefined;
+                      if (payload.description) {
+                        try {
+                          aiAnalysis = await analyzeIncidentIssue(payload.description, payload.sensorName || 'Unknown Sensor');
+                        } catch (err) {
+                          console.error("Gemini failed in Vite Dev Server plug:", err);
+                        }
+                      }
+
+                      const newID = `INC-2026-${String(incidents.length + 1).padStart(3, '0')}`;
+                      const newIncident = {
+                        id: newID,
+                        timestamp: new Date().toISOString(),
+                        sensorId: payload.sensorId || 'UNKNOWN',
+                        sensorName: payload.sensorName || 'Unknown Component',
+                        urgency: (payload.urgency || 'Low') as 'Low' | 'Medium' | 'High',
+                        description: payload.description || '',
+                        reporterName: payload.reporterName || 'Anonymous',
+                        status: 'Pending' as 'Pending' | 'Investigating' | 'Resolved',
+                        aiAnalysis,
+                        attachment: payload.attachment
+                      };
+
+                      incidents.unshift(newIncident);
+                      await saveIncidents(incidents);
+                      res.statusCode = 201;
+                      res.end(JSON.stringify(newIncident));
+                    } catch (innerErr: any) {
+                      res.statusCode = 400;
+                      res.end(JSON.stringify({ error: innerErr.message }));
+                    }
+                  });
+                } catch (e: any) {
+                  res.statusCode = 500;
+                  res.end(JSON.stringify({ error: e.message }));
+                }
+              } else if (method === 'PUT') {
+                const parts = url.pathname.split('/');
+                const id = parts[parts.length - 1];
+                let body = '';
+                req.on('data', chunk => { body += chunk; });
+                req.on('end', async () => {
+                  try {
+                    const payload = body ? JSON.parse(body) : {};
+                    const incidents = await getIncidents();
+                    const idx = incidents.findIndex(item => item.id === id);
+                    if (idx === -1) {
+                      res.statusCode = 404;
+                      res.end(JSON.stringify({ error: 'Incident not found' }));
+                      return;
+                    }
+                    incidents[idx] = {
+                      ...incidents[idx],
+                      status: payload.status || incidents[idx].status,
+                      resolutionNote: payload.resolutionNote !== undefined ? payload.resolutionNote : incidents[idx].resolutionNote
+                    };
+                    await saveIncidents(incidents);
+                    res.end(JSON.stringify(incidents[idx]));
+                  } catch (innerErr: any) {
+                    res.statusCode = 400;
+                    res.end(JSON.stringify({ error: innerErr.message }));
+                  }
+                });
+              } else if (method === 'DELETE') {
+                const parts = url.pathname.split('/');
+                const id = parts[parts.length - 1];
+                try {
+                  const incidents = await getIncidents();
+                  const filtered = incidents.filter(item => item.id !== id);
+                  if (incidents.length === filtered.length) {
+                    res.statusCode = 404;
+                    res.end(JSON.stringify({ error: 'Incident not found' }));
+                  } else {
+                    await saveIncidents(filtered);
+                    res.end(JSON.stringify({ success: true, id }));
+                  }
+                } catch (e: any) {
+                  res.statusCode = 500;
+                  res.end(JSON.stringify({ error: e.message }));
+                }
+              }
+            } else if (req.url?.startsWith('/api/analyze')) {
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => { body += chunk; });
+                req.on('end', async () => {
+                  try {
+                    const payload = body ? JSON.parse(body) : {};
+                    const result = await analyzeIncidentIssue(payload.description, payload.sensorName);
+                    res.end(JSON.stringify(result));
+                  } catch (e: any) {
+                    res.statusCode = 500;
+                    res.end(JSON.stringify({ error: e.message }));
+                  }
+                });
+              } else {
+                res.statusCode = 405;
+                res.end(JSON.stringify({ error: 'Method not allowed' }));
+              }
+            } else {
+              next();
+            }
+          });
+        }
+      }
+    ],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '.'),
+      },
+    },
+    server: {
+      hmr: process.env.DISABLE_HMR !== 'true',
+      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    },
+  };
+});
