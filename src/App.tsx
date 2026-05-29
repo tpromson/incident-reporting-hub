@@ -626,7 +626,9 @@ export default function App() {
                   <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">Live</span>
                 </div>
                 
-                <div className="space-y-3.5 flex-1 overflow-y-auto max-h-[300px] pr-1.5">
+                <div className={`space-y-3.5 flex-1 overflow-y-auto pr-1.5 ${
+                  userRole === 'admin' ? 'max-h-[300px]' : 'max-h-[500px] lg:max-h-none'
+                }`}>
                   {sensors.map(sensor => (
                     <div 
                       key={sensor.id} 
