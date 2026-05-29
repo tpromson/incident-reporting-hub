@@ -467,10 +467,21 @@ export async function getSensorsFromSheet(): Promise<SensorStatus[]> {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${googleSheetId}/export?format=csv&gid=112576994`;
 
   try {
-    const res = await fetch(csvUrl);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 seconds timeout
+
+    const res = await fetch(csvUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
     if (!res.ok) {
       throw new Error(`Google Sheets responded with status ${res.status}`);
     }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      throw new Error("Google Sheets returned HTML instead of CSV. Please make sure the sheet is shared as 'Anyone with the link can view'!");
+    }
+
     const text = await res.text();
     const lines = text.split(/\r?\n/);
     
