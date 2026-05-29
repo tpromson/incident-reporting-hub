@@ -655,9 +655,39 @@ export default function App() {
               
               {/* Sensor Health Monitor Card */}
               <div className="bg-white rounded-2xl p-5 shadow-xs border border-slate-200 flex flex-col flex-1">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-3">
                   <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">เซ็นเซอร์รายจุด (Sensor Health)</h3>
                   <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">Live</span>
+                </div>
+
+                {/* Status Summary Banner */}
+                <div className="grid grid-cols-3 gap-2 mb-4 shrink-0">
+                  <div className="bg-emerald-50/60 border border-emerald-100/70 rounded-xl p-2 text-center flex flex-col gap-0.5">
+                    <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Online</span>
+                    <span className="text-sm font-extrabold text-emerald-700 font-mono">
+                      {sensors.filter(s => s.status === 'Online').length}
+                    </span>
+                  </div>
+                  <div className={`rounded-xl p-2 text-center flex flex-col gap-0.5 border ${
+                    sensors.filter(s => s.status === 'Error').length > 0 
+                      ? 'bg-rose-50 border-rose-100 animate-pulse' 
+                      : 'bg-slate-50/70 border-slate-200/50'
+                  }`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                      sensors.filter(s => s.status === 'Error').length > 0 ? 'text-rose-600' : 'text-slate-400'
+                    }`}>Error</span>
+                    <span className={`text-sm font-extrabold font-mono ${
+                      sensors.filter(s => s.status === 'Error').length > 0 ? 'text-rose-700' : 'text-slate-500'
+                    }`}>
+                      {sensors.filter(s => s.status === 'Error').length}
+                    </span>
+                  </div>
+                  <div className="bg-amber-50/60 border border-amber-100/70 rounded-xl p-2 text-center flex flex-col gap-0.5">
+                    <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Maint.</span>
+                    <span className="text-sm font-extrabold text-amber-700 font-mono">
+                      {sensors.filter(s => s.status === 'Maintenance').length}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className={`space-y-3.5 flex-1 overflow-y-auto pr-1.5 ${
