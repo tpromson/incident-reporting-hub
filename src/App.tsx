@@ -1402,6 +1402,10 @@ export default function App() {
                           <strong>FIREBASE_PROJECT_ID</strong><br />
                           ไอดีโปรเจกต์ของ Firebase Database
                         </div>
+                        <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2 md:col-span-1">
+                          <strong>LINE_LIFF_URL</strong><br />
+                          (ไม่บังคับ) ลิงก์ LIFF เพื่อเปิดหน้าจอ Webview ในแอปไลน์
+                        </div>
                         <div className="bg-white border rounded p-2 text-[10px] font-mono col-span-2">
                           <strong>FIREBASE_CLIENT_EMAIL & PRIVATE_KEY</strong><br />
                           ข้อมูล Service Account สำหรับเชื่อมต่อฐานข้อมูล
