@@ -23,11 +23,14 @@ import {
   Send,
   ExternalLink,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Thermometer,
+  Droplet,
+  Gauge,
+  Zap
 } from 'lucide-react';
 import { IncidentReport, SensorStatus, LineChatMessage } from './types';
 
-// Predefined sensor list
 const INITIAL_SENSORS: SensorStatus[] = [
   { id: "SN-2044", name: "SN-2044 (Temperature)", location: "Server Room A", status: "Online", lastReading: "24.5 °C", type: "Temperature" },
   { id: "SN-2045", name: "SN-2045 (Humidity)", location: "Main Warehouse B", status: "Error", lastReading: "98.2% RH", type: "Humidity" },
@@ -35,6 +38,37 @@ const INITIAL_SENSORS: SensorStatus[] = [
   { id: "SN-3112", name: "SN-3112 (Thermal Regulator)", location: "Cooling Tower 1", status: "Online", lastReading: "42.1 °C", type: "Temperature" },
   { id: "SYS-MOD", name: "SYS-MOD (Main Control Logic)", location: "Central Console", status: "Online", lastReading: "Voltage nominal", type: "Voltage" }
 ];
+
+const getSensorIcon = (type: string, status: string) => {
+  const iconClass = status === 'Error' ? 'animate-bounce' : '';
+  switch (type) {
+    case 'Temperature':
+      return <Thermometer size={16} className={`text-rose-600 ${iconClass}`} />;
+    case 'Humidity':
+      return <Droplet size={16} className={`text-blue-600 ${iconClass}`} />;
+    case 'Pressure':
+      return <Gauge size={16} className={`text-indigo-600 ${iconClass}`} />;
+    case 'Voltage':
+      return <Zap size={16} className={`text-amber-600 ${iconClass}`} />;
+    default:
+      return <Activity size={16} className={`text-slate-600 ${iconClass}`} />;
+  }
+};
+
+const getSensorBg = (type: string) => {
+  switch (type) {
+    case 'Temperature':
+      return 'bg-rose-50 border-rose-100';
+    case 'Humidity':
+      return 'bg-blue-50 border-blue-100';
+    case 'Pressure':
+      return 'bg-indigo-50 border-indigo-100';
+    case 'Voltage':
+      return 'bg-amber-50 border-amber-100';
+    default:
+      return 'bg-slate-50 border-slate-100';
+  }
+};
 
 export default function App() {
   // App state
@@ -629,27 +663,50 @@ export default function App() {
                 <div className={`space-y-3.5 flex-1 overflow-y-auto pr-1.5 ${
                   userRole === 'admin' ? 'max-h-[300px]' : 'max-h-[500px] lg:max-h-none'
                 }`}>
-                  {sensors.map(sensor => (
-                    <div 
-                      key={sensor.id} 
-                      onClick={() => userRole === 'admin' && toggleSensorStatus(sensor.id)}
-                      title={userRole === 'admin' ? "คลิก เพื่อสลับสถานะจำลองข้อผิดพลาด" : undefined}
-                      className={`p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between transition-all ${userRole === 'admin' ? 'hover:bg-slate-100 cursor-pointer' : ''}`}
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs font-bold text-slate-700">{sensor.id}</span>
-                        <span className="text-[10px] text-slate-400">{sensor.type} · {sensor.location}</span>
-                        <span className="text-[11px] text-slate-500 font-mono mt-1">{sensor.lastReading}</span>
+                  {sensors.map(sensor => {
+                    const isOnline = sensor.status === 'Online';
+                    const isError = sensor.status === 'Error';
+                    const isMaintenance = sensor.status === 'Maintenance';
+                    
+                    let leftBorderColor = 'border-l-emerald-500';
+                    if (isError) leftBorderColor = 'border-l-rose-500';
+                    else if (isMaintenance) leftBorderColor = 'border-l-amber-500';
+                    
+                    return (
+                      <div 
+                        key={sensor.id} 
+                        onClick={() => userRole === 'admin' && toggleSensorStatus(sensor.id)}
+                        title={userRole === 'admin' ? "คลิก เพื่อสลับสถานะจำลองข้อผิดพลาด" : undefined}
+                        className={`p-3 bg-white border border-slate-200 border-l-4 ${leftBorderColor} rounded-xl flex items-center justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                          userRole === 'admin' ? 'hover:bg-slate-50/80 cursor-pointer' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${getSensorBg(sensor.type)} shrink-0`}>
+                            {getSensorIcon(sensor.type, sensor.status)}
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-slate-800">{sensor.id}</span>
+                              <span className="text-[9px] text-slate-400 font-medium">({sensor.location})</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-semibold">{sensor.type}</span>
+                            <span className="text-[11px] text-slate-500 font-mono mt-0.5 font-bold">{sensor.lastReading}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-colors ${
+                            isOnline ? 'bg-emerald-100 text-emerald-700' :
+                            isError ? 'bg-rose-100 text-rose-700 animate-pulse' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {sensor.status}
+                          </span>
+                        </div>
                       </div>
-                      <span className={`px-2 py-0.5 text-[9px] font-extrabold rounded uppercase tracking-wider transition-colors ${
-                        sensor.status === 'Online' ? 'bg-emerald-100 text-emerald-700' :
-                        sensor.status === 'Error' ? 'bg-rose-100 text-rose-700 animate-pulse' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
-                        {sensor.status}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {userRole === 'admin' && (
