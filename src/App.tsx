@@ -43,6 +43,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isLIFTMode, setIsLIFTMode] = useState(false); // Simulated LINE webview container toggle
+  const [userRole, setUserRole] = useState<'user' | 'admin'>('admin'); // Role control state
 
   // Form State
   const [selectedSensorId, setSelectedSensorId] = useState('SN-2045');
@@ -496,8 +497,19 @@ export default function App() {
               {sensors.filter(s => s.status === 'Error').length > 0 ? "Alert High" : "All Active"}
             </p>
           </div>
-          <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 font-extrabold text-xs shadow-inner">
-            <User size={16} />
+          <div className="flex items-center gap-2 border border-slate-200 bg-white px-3 py-1.5 rounded-2xl shadow-sm">
+            <div className={`w-2 h-2 rounded-full ${userRole === 'admin' ? 'bg-indigo-600 animate-pulse' : 'bg-slate-400'}`}></div>
+            <select
+              value={userRole}
+              onChange={(e) => {
+                const role = e.target.value as 'user' | 'admin';
+                setUserRole(role);
+              }}
+              className="bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="admin">🔧 Admin / ช่างซ่อม</option>
+              <option value="user">👤 User / ผู้แจ้ง</option>
+            </select>
           </div>
         </div>
       </nav>
@@ -570,9 +582,9 @@ export default function App() {
                   {sensors.map(sensor => (
                     <div 
                       key={sensor.id} 
-                      onClick={() => toggleSensorStatus(sensor.id)}
-                      title="คลิก เพื่อสลับสถานะจำลองข้อผิดพลาด"
-                      className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between cursor-pointer transition-all"
+                      onClick={() => userRole === 'admin' && toggleSensorStatus(sensor.id)}
+                      title={userRole === 'admin' ? "คลิก เพื่อสลับสถานะจำลองข้อผิดพลาด" : undefined}
+                      className={`p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between transition-all ${userRole === 'admin' ? 'hover:bg-slate-100 cursor-pointer' : ''}`}
                     >
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs font-bold text-slate-700">{sensor.id}</span>
@@ -1026,13 +1038,17 @@ export default function App() {
                           )}
                         </td>
                         <td className="p-3 text-center">
-                          <button 
-                            onClick={() => handleDeleteReport(inc.id)}
-                            title="ลบแถวคอลัมน์ถาวร"
-                            className="p-1 text-slate-400 hover:text-rose-500 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {userRole === 'admin' ? (
+                            <button 
+                              onClick={() => handleDeleteReport(inc.id)}
+                              title="ลบแถวคอลัมน์ถาวร"
+                              className="p-1 text-slate-400 hover:text-rose-500 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : (
+                            <span className="text-slate-300 font-sans text-[10px]">ผู้ดูเท่านั้น</span>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -1447,10 +1463,10 @@ export default function App() {
             <div className="bg-slate-50 p-6 border-b border-slate-200 flex justify-between items-center shrink-0">
               <div>
                 <span className="text-[10px] uppercase font-mono tracking-widest bg-slate-200 font-extrabold px-2.5 py-1 rounded text-slate-500">
-                  ADMIN INCIDENT MANAGER
+                  {userRole === 'admin' ? "ADMIN INCIDENT MANAGER" : "INCIDENT DETAILS"}
                 </span>
                 <h3 className="text-base font-bold text-slate-800 mt-2 flex items-center gap-1.5">
-                  🔧 อัปเดตความคืบหน้ากรณี: [{selectedIncident.id}]
+                  {userRole === 'admin' ? "🔧 อัปเดตความคืบหน้ากรณี: " : "📋 รายละเอียดเคสแจ้งซ่อม: "} [{selectedIncident.id}]
                 </h3>
               </div>
               <button 
@@ -1501,38 +1517,62 @@ export default function App() {
               )}
 
               {/* Resolution Form input fields */}
-              <div className="space-y-2.5 pt-2">
-                <label className="text-xs font-extrabold text-slate-400 uppercase tracking-widest block">
-                  บันทึกความคืบหน้า / วิธีการแก้ไข (Resolution notes)
-                </label>
-                <textarea 
-                  rows={3}
-                  value={resolutionText}
-                  onChange={(e) => setResolutionText(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 resize-none font-medium leading-relaxed"
-                  placeholder="กรุณาระบุรายละเอียดการดำเนินการ เช่น ช่างเข้าตรวจแล้ว, รีเซ็ตวงจรแล้ว, เปลี่ยนหัววัดเซ็นเซอร์ใหม่..."
-                ></textarea>
-              </div>
+              {userRole === 'admin' ? (
+                <div className="space-y-2.5 pt-2">
+                  <label className="text-xs font-extrabold text-slate-400 uppercase tracking-widest block">
+                    บันทึกความคืบหน้า / วิธีการแก้ไข (Resolution notes)
+                  </label>
+                  <textarea 
+                    rows={3}
+                    value={resolutionText}
+                    onChange={(e) => setResolutionText(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 resize-none font-medium leading-relaxed"
+                    placeholder="กรุณาระบุรายละเอียดการดำเนินการ เช่น ช่างเข้าตรวจแล้ว, รีเซ็ตวงจรแล้ว, เปลี่ยนหัววัดเซ็นเซอร์ใหม่..."
+                  ></textarea>
+                </div>
+              ) : (
+                selectedIncident.resolutionNote && (
+                  <div className="space-y-1.5 pt-2">
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">
+                      บันทึกการแก้ไขปัญหา:
+                    </label>
+                    <p className="text-xs text-slate-650 font-sans leading-relaxed italic bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      {selectedIncident.resolutionNote}
+                    </p>
+                  </div>
+                )
+              )}
 
             </div>
 
             {/* Modal Footer with Actions */}
             <div className="p-6 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-2 shrink-0 justify-end">
-              <button 
-                onClick={() => handleUpdateStatus(selectedIncident.id, 'Investigating', resolutionText)}
-                disabled={resolving}
-                className="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-amber-300"
-              >
-                กำลังสืบสวนตรวจค้น
-              </button>
-              <button 
-                onClick={() => handleUpdateStatus(selectedIncident.id, 'Resolved', resolutionText)}
-                disabled={resolving}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-200 cursor-pointer flex items-center gap-1.5"
-              >
-                <span>แก้ไขปัญหาเสร็จสิ้น (Resolved)</span>
-                <CheckCircle2 size={14} />
-              </button>
+              {userRole === 'admin' ? (
+                <>
+                  <button 
+                    onClick={() => handleUpdateStatus(selectedIncident.id, 'Investigating', resolutionText)}
+                    disabled={resolving}
+                    className="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-amber-300"
+                  >
+                    กำลังสืบสวนตรวจค้น
+                  </button>
+                  <button 
+                    onClick={() => handleUpdateStatus(selectedIncident.id, 'Resolved', resolutionText)}
+                    disabled={resolving}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-200 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>แก้ไขปัญหาเสร็จสิ้น (Resolved)</span>
+                    <CheckCircle2 size={14} />
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setSelectedIncident(null)}
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-5 py-2.5 rounded-xl transition-all cursor-pointer"
+                >
+                  ปิดหน้าต่าง
+                </button>
+              )}
             </div>
 
           </div>
