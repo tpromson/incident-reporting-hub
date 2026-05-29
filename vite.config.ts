@@ -145,9 +145,10 @@ export default defineConfig(() => {
                 req.on('end', async () => {
                   try {
                     const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-                    if (!token || token === "your-line-channel-access-token") {
-                      res.statusCode = 500;
-                      res.end(JSON.stringify({ error: "LINE Channel Access Token is not configured" }));
+                    if (!token || token === "your-line-channel-access-token" || token === "") {
+                      console.warn("[LINE Webhook] Warning: LINE_CHANNEL_ACCESS_TOKEN is not configured. Webhook returns 200 OK for verification.");
+                      res.statusCode = 200;
+                      res.end(JSON.stringify({ success: true, warning: "Token not configured" }));
                       return;
                     }
                     const payload = body ? JSON.parse(body) : {};
@@ -166,23 +167,32 @@ export default defineConfig(() => {
                           replyText = `📊 รายงานสรุปสถานะอุปกรณ์ล่าสุด:\n- เคสที่ค้างคา: ${pending} เคส\n- เคสที่แก้ไขแล้ว: ${incidents.filter(i => i.status === 'Resolved').length} เคส\nตรวจสอบประวัติทั้งหมดได้ที่แผงควบคุมหลักครับ!`;
                         }
 
-                        await fetch("https://api.line.me/v2/bot/message/reply", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${token}`
-                          },
-                          body: JSON.stringify({
-                            replyToken: replyToken,
-                            messages: [{ type: "text", text: replyText }]
-                          })
-                        });
+                        try {
+                          const response = await fetch("https://api.line.me/v2/bot/message/reply", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "Authorization": `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                              replyToken: replyToken,
+                              messages: [{ type: "text", text: replyText }]
+                            })
+                          });
+                          if (!response.ok) {
+                            console.error(`[LINE Webhook] LINE API responded with ${response.status}: ${await response.text()}`);
+                          }
+                        } catch (fetchErr) {
+                          console.error("[LINE Webhook] Failed to send reply to LINE:", fetchErr);
+                        }
                       }
                     }
+                    res.statusCode = 200;
                     res.end(JSON.stringify({ success: true }));
                   } catch (e: any) {
-                    res.statusCode = 500;
-                    res.end(JSON.stringify({ error: e.message }));
+                    console.error("[LINE Webhook] Error processing event in dev server:", e);
+                    res.statusCode = 200; // Always return 200 to LINE to prevent suspension
+                    res.end(JSON.stringify({ success: false, error: e.message }));
                   }
                 });
               } else {

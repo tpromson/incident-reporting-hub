@@ -143,8 +143,9 @@ app.delete('/api/incidents/:id', async (req, res) => {
 // POST LINE Webhook
 app.post('/api/line/webhook', async (req, res) => {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-  if (!token || token === "your-line-channel-access-token") {
-    return res.status(500).json({ error: "LINE Channel Access Token is not configured" });
+  if (!token || token === "your-line-channel-access-token" || token === "") {
+    console.warn("[LINE Webhook] Warning: LINE_CHANNEL_ACCESS_TOKEN is not configured. Webhook returns 200 OK for verification.");
+    return res.status(200).json({ success: true, warning: "Token not configured" });
   }
 
   try {
@@ -164,28 +165,36 @@ app.post('/api/line/webhook', async (req, res) => {
         }
 
         // Send reply message
-        await fetch("https://api.line.me/v2/bot/message/reply", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            replyToken: replyToken,
-            messages: [
-              {
-                type: "text",
-                text: replyText
-              }
-            ]
-          })
-        });
+        try {
+          const response = await fetch("https://api.line.me/v2/bot/message/reply", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              replyToken: replyToken,
+              messages: [
+                {
+                  type: "text",
+                  text: replyText
+                }
+              ]
+            })
+          });
+          if (!response.ok) {
+            console.error(`[LINE Webhook] LINE API responded with ${response.status}: ${await response.text()}`);
+          }
+        } catch (fetchErr) {
+          console.error("[LINE Webhook] Failed to send reply to LINE:", fetchErr);
+        }
       }
     }
-    res.json({ success: true });
+    res.status(200).json({ success: true });
   } catch (err: any) {
     console.error("[LINE Webhook] Error processing event:", err);
-    res.status(500).json({ error: err.message });
+    // Always return 200 to LINE to avoid webhook suspension
+    res.status(200).json({ success: false, error: err.message });
   }
 });
 
