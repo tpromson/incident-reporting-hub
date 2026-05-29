@@ -55,6 +55,7 @@ export default function App() {
     if (role === 'user') {
       sessionStorage.removeItem('isAdminAuthenticated');
       setUserRole('user');
+      setActiveTab('dashboard');
     } else {
       if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
         setUserRole('admin');
@@ -301,7 +302,11 @@ export default function App() {
         ]);
 
         // Show LINE response alert / toast
-        setActiveTab('line'); // Swith to LINE sim to see results
+        if (userRole === 'admin') {
+          setActiveTab('line'); // Swith to LINE sim to see results
+        } else {
+          alert("แจ้งเรื่องเสร็จสิ้น! รายงานของท่านได้รับการลงทะเบียนและส่งการแจ้งเตือนไปยังฝ่ายเทคนิคเรียบร้อยแล้ว");
+        }
 
         // Clear values
         setDescription('');
@@ -471,36 +476,38 @@ export default function App() {
         </div>
 
         {/* Navigation Tabs (Quick access) */}
-        <div className="hidden md:flex items-center bg-slate-100 rounded-xl p-1 gap-1 border border-slate-200">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            <Activity size={14} />
-            แผงควบคุมหลัก
-          </button>
-          <button 
-            onClick={() => setActiveTab('spreadsheet')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'spreadsheet' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            <FileSpreadsheet size={14} />
-            Google Sheet (<span className="truncate max-w-[40px]">{googleSheetId}</span>)
-          </button>
-          <button 
-            onClick={() => setActiveTab('line')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'line' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            <MessageSquare size={14} />
-            LINE OA Chat Live
-          </button>
-          <button 
-            onClick={() => setActiveTab('info')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'info' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            <Info size={14} />
-            วิธีกรอก / เชื่อม LINE
-          </button>
-        </div>
+        {userRole === 'admin' && (
+          <div className="hidden md:flex items-center bg-slate-100 rounded-xl p-1 gap-1 border border-slate-200">
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              <Activity size={14} />
+              แผงควบคุมหลัก
+            </button>
+            <button 
+              onClick={() => setActiveTab('spreadsheet')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'spreadsheet' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              <FileSpreadsheet size={14} />
+              Google Sheet (<span className="truncate max-w-[40px]">{googleSheetId}</span>)
+            </button>
+            <button 
+              onClick={() => setActiveTab('line')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'line' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              <MessageSquare size={14} />
+              LINE OA Chat Live
+            </button>
+            <button 
+              onClick={() => setActiveTab('info')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'info' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              <Info size={14} />
+              วิธีกรอก / เชื่อม LINE
+            </button>
+          </div>
+        )}
 
         {/* Global Action and Status */}
         <div className="flex items-center gap-4">
@@ -536,54 +543,58 @@ export default function App() {
       </nav>
 
       {/* Mobile Tab bar - Simple and user accessible */}
-      <div className="flex md:hidden bg-white border-b border-slate-200 p-2 justify-around shadow-inner scrollbar-none z-20 overflow-x-auto gap-2">
-        <button 
-          onClick={() => setActiveTab('dashboard')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
-        >
-          <Activity size={14} /> แผงควบคุม
-        </button>
-        <button 
-          onClick={() => setActiveTab('spreadsheet')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'spreadsheet' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
-        >
-          <FileSpreadsheet size={14} /> Sheet
-        </button>
-        <button 
-          onClick={() => setActiveTab('line')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'line' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
-        >
-          <MessageSquare size={14} /> LINE Live
-        </button>
-        <button 
-          onClick={() => setActiveTab('info')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'info' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
-        >
-          <Info size={14} /> วิธีทำ
-        </button>
-      </div>
+      {userRole === 'admin' && (
+        <div className="flex md:hidden bg-white border-b border-slate-200 p-2 justify-around shadow-inner scrollbar-none z-20 overflow-x-auto gap-2">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
+          >
+            <Activity size={14} /> แผงควบคุม
+          </button>
+          <button 
+            onClick={() => setActiveTab('spreadsheet')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'spreadsheet' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
+          >
+            <FileSpreadsheet size={14} /> Sheet
+          </button>
+          <button 
+            onClick={() => setActiveTab('line')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'line' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
+          >
+            <MessageSquare size={14} /> LINE Live
+          </button>
+          <button 
+            onClick={() => setActiveTab('info')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'info' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
+          >
+            <Info size={14} /> วิธีทำ
+          </button>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 max-w-7xl w-full mx-auto">
         
         {/* Toggle LIFT Simulator warning only on tab view when appropriate */}
-        <div className="bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-          <div className="flex gap-3 items-center">
-            <div className="p-2 bg-indigo-600 rounded-xl text-white">
-              <Smartphone size={20} className="animate-bounce" />
+        {userRole === 'admin' && (
+          <div className="bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+            <div className="flex gap-3 items-center">
+              <div className="p-2 bg-indigo-600 rounded-xl text-white">
+                <Smartphone size={20} className="animate-bounce" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-800">ทดสอบแบบจำลองหน้าจอ LINE คล้าย Google Form 📱</h4>
+                <p className="text-xs text-slate-500">คุณสามารถปรับเปลี่ยนโหมดของฟอร์มรายงานให้มีดีไซน์พอดีหน้าจอโทรศัพท์สไตล์ LINE Webview (LIFT) ได้ที่นี่</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-slate-800">ทดสอบแบบจำลองหน้าจอ LINE คล้าย Google Form 📱</h4>
-              <p className="text-xs text-slate-500">คุณสามารถปรับเปลี่ยนโหมดของฟอร์มรายงานให้มีดีไซน์พอดีหน้าจอโทรศัพท์สไตล์ LINE Webview (LIFT) ได้ที่นี่</p>
-            </div>
+            <button 
+              onClick={() => setIsLIFTMode(!isLIFTMode)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md cursor-pointer transition-all shrink-0 flex items-center justify-center gap-1.5"
+            >
+              <span>{isLIFTMode ? "สลับกลับมุมมอง Desktop" : "สลับปรับสไตล์ LINE (LIFT) โทรศัพท์"}</span>
+            </button>
           </div>
-          <button 
-            onClick={() => setIsLIFTMode(!isLIFTMode)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md cursor-pointer transition-all shrink-0 flex items-center justify-center gap-1.5"
-          >
-            <span>{isLIFTMode ? "สลับกลับมุมมอง Desktop" : "สลับปรับสไตล์ LINE (LIFT) โทรศัพท์"}</span>
-          </button>
-        </div>
+        )}
 
         {/* Tab 1: Incident Dashboard View */}
         {activeTab === 'dashboard' && (
@@ -623,35 +634,42 @@ export default function App() {
                   ))}
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400 bg-slate-50/50 p-2.5 rounded-xl">
-                  💡 <span className="font-bold text-slate-500">จำลองปัญหา:</span> คลิกที่แต่ละเซ็นเซอร์เพื่อเปลี่ยนสถานะเป็น <span className="text-rose-500">Error</span> ซึ่งจะส่งผลให้มีไอคอนขึ้นแจ้งว่าระบบมีรายงานการผิดพลาด!
-                </div>
+                {userRole === 'admin' && (
+                  <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400 bg-slate-50/50 p-2.5 rounded-xl">
+                    💡 <span className="font-bold text-slate-500">จำลองปัญหา:</span> คลิกที่แต่ละเซ็นเซอร์เพื่อเปลี่ยนสถานะเป็น <span className="text-rose-500">Error</span> ซึ่งจะส่งผลให้มีไอคอนขึ้นแจ้งว่าระบบมีรายงานการผิดพลาด!
+                  </div>
+                )}
               </div>
 
               {/* Push LINE OA Card */}
-              <div className="bg-indigo-600 rounded-2xl p-5 shadow-lg text-white flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute -right-8 -bottom-8 text-indigo-400 opacity-20">
-                  <Smartphone size={120} />
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
-                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-indigo-200">Auto-Sync LINE OA</h3>
+              {userRole === 'admin' && (
+                <div className="bg-indigo-600 rounded-2xl p-5 shadow-lg text-white flex flex-col justify-between relative overflow-hidden">
+                  <div className="absolute -right-8 -bottom-8 text-indigo-400 opacity-20">
+                    <Smartphone size={120} />
                   </div>
-                  <p className="text-xs leading-relaxed text-indigo-50/90 font-medium">
-                    เมื่อผู้ใช้ล็อกอินแจ้งซ่อมผ่าน LINE แบบฟอร์ม ข้อมูลพังเสียหายจะถูกส่งเข้า LINE Developers Channel สำหรับช่างเทคนิคทันที พร้อมรายงานการวิเคราะห์จาก <strong>Gemini AI</strong>
-                  </p>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
+                      <h3 className="text-xs font-extrabold uppercase tracking-widest text-indigo-200">Auto-Sync LINE OA</h3>
+                    </div>
+                    <p className="text-xs leading-relaxed text-indigo-50/90 font-medium">
+                      เมื่อผู้ใช้ล็อกอินแจ้งซ่อมผ่าน LINE แบบฟอร์ม ข้อมูลพังเสียหายจะถูกส่งเข้า LINE Developers Channel สำหรับช่างเทคนิคทันที พร้อมรายงานการวิเคราะห์จาก <strong>Gemini AI</strong>
+                    </p>
+                  </div>
+                  <div className="mt-5 relative z-10 pt-4 border-t border-indigo-400/30 flex items-center justify-between">
+                    <span className="text-[10px] font-bold tracking-wide uppercase">Webhook Active</span>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded font-bold">LIFT API v2</span>
+                  </div>
                 </div>
-                <div className="mt-5 relative z-10 pt-4 border-t border-indigo-400/30 flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-wide uppercase">Webhook Active</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded font-bold">LIFT API v2</span>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Middle Column: The interactive main Form (Vegas Phone-fit / Grid desktop-fit) - 6 span */}
-            <div className={`lg:col-span-6 flex flex-col ${isLIFTMode ? 'max-w-[420px] mx-auto w-full lg:col-span-6 shadow-2xl rounded-[40px] border-[12px] border-slate-800 bg-white ring-8 ring-slate-100 overflow-hidden' : ''}`}>
-              <div className={`bg-white rounded-3xl border border-slate-200 overflow-hidden flex flex-col flex-1 shadow-sm`}>
+            {/* Middle Column: The interactive main Form (Vegas Phone-fit / Grid desktop-fit) */}
+            <div className={`flex flex-col ${
+              isLIFTMode ? 'max-w-[420px] mx-auto w-full lg:col-span-6 shadow-2xl rounded-[40px] border-[12px] border-slate-800 bg-white ring-8 ring-slate-100 overflow-hidden' : 
+              userRole === 'admin' ? 'lg:col-span-6' : 'lg:col-span-9'
+            }`}>
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden flex flex-col flex-1 shadow-sm">
                 
                 {/* LIFT Phone Header representation */}
                 {isLIFTMode && (
@@ -677,27 +695,32 @@ export default function App() {
                   </div>
                   
                   {/* Quick autofill select box to test Gemini capability */}
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block w-full">คลิกทดสอบด่วน (Autofill):</span>
-                    <button 
-                      onClick={() => applyAutofill('humidity')} 
-                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-1 rounded-md transition-colors cursor-pointer border border-emerald-200"
-                    >
-                      ความชื้นรั่ว
-                    </button>
-                    <button 
-                      onClick={() => applyAutofill('temperature')} 
-                      className="bg-rose-50 hover:bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-1 rounded-md transition-colors cursor-pointer border border-rose-200"
-                    >
-                      ความร้อนขึ้น
-                    </button>
-                    <button 
-                      onClick={() => applyAutofill('voltage')} 
-                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-1 rounded-md transition-colors cursor-pointer border border-indigo-200"
-                    >
-                      ระบบไฟดับ
-                    </button>
-                  </div>
+                  {userRole === 'admin' && (
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block w-full">คลิกทดสอบด่วน (Autofill):</span>
+                      <button 
+                        type="button"
+                        onClick={() => applyAutofill('humidity')} 
+                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-1 rounded-md transition-colors cursor-pointer border border-emerald-200"
+                      >
+                        ความชื้นรั่ว
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => applyAutofill('temperature')} 
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-1 rounded-md transition-colors cursor-pointer border border-rose-200"
+                      >
+                        ความร้อนขึ้น
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => applyAutofill('voltage')} 
+                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-1 rounded-md transition-colors cursor-pointer border border-indigo-200"
+                      >
+                        ระบบไฟดับ
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Interactive Google-Forms / LIFT Form Body */}
@@ -838,7 +861,10 @@ export default function App() {
                 {/* Submit Sticky Footer Section */}
                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
                   <p className="text-[10px] text-slate-400 font-medium max-w-[280px]">
-                    เมื่อกดส่งข้อมูล ระบบจะนำแผงควบคุมและแผนงานวิเคราะห์ด้วย Gemini AI โฆษณาทดสอบ และจัดเก็บบันทึกในหม้อประวัติ Spreadsheet ID ข้างต้นทันที
+                    {userRole === 'admin' 
+                      ? "เมื่อกดส่งข้อมูล ระบบจะนำแผงควบคุมและแผนงานวิเคราะห์ด้วย Gemini AI และจัดเก็บบันทึกในประวัติ Spreadsheet ID ข้างต้นทันที"
+                      : "เมื่อกดส่งข้อมูล ระบบจะทำการตรวจสอบและนำส่งข้อมูลรายงานความเสียหายไปยังผู้ดูแลระบบและแจ้งเตือนผ่านกลุ่มไลน์ทันที"
+                    }
                   </p>
                   <button 
                     onClick={handleSubmit}
@@ -862,79 +888,81 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Column: Recent Activities in Realtime - 3 span */}
-            <div className="lg:col-span-3 flex flex-col gap-5">
-              <div className="bg-white rounded-2xl p-5 shadow-xs border border-slate-200 flex flex-col flex-1">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">ประวัติแจ้งผิดปกติ (Recent reports)</h3>
-                  <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded font-mono">{incidents.length} รายการ</span>
-                </div>
+            {/* Right Column: Recent Activities in Realtime (Admin Only) */}
+            {userRole === 'admin' && (
+              <div className="lg:col-span-3 flex flex-col gap-5">
+                <div className="bg-white rounded-2xl p-5 shadow-xs border border-slate-200 flex flex-col flex-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">ประวัติแจ้งผิดปกติ (Recent reports)</h3>
+                    <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded font-mono">{incidents.length} รายการ</span>
+                  </div>
 
-                <div className="space-y-4 flex-1 overflow-y-auto max-h-[350px] pr-1.5">
-                  {loading ? (
-                    <div className="text-center py-8 text-xs text-slate-400">
-                      <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-slate-400" />
-                      <span>กำลังโหลดรายงานล่าสุด...</span>
-                    </div>
-                  ) : incidents.length === 0 ? (
-                    <div className="text-center py-12 text-xs text-slate-400 border-2 border-dashed border-slate-100 rounded-xl p-4">
-                      <CheckCircle2 size={32} className="mx-auto mb-2 text-slate-300" />
-                      <p className="font-bold text-slate-500">ไม่มีปัญหาตกค้าง!</p>
-                      <p className="scale-90 text-[10px] mt-0.5 text-slate-400">ทุกเซ็นเซอร์กำลังทำงานสมบูรณ์ดี</p>
-                    </div>
-                  ) : (
-                    incidents.map(inc => (
-                      <div 
-                        key={inc.id}
-                        onClick={() => setSelectedIncident(inc)}
-                        className={`p-3.5 bg-slate-50 hover:bg-slate-100 border-l-4 rounded-xl cursor-pointer transition-all border ${
-                          inc.status === 'Resolved' ? 'border-emerald-500 border-l-emerald-500 bg-emerald-50/10' :
-                          inc.status === 'Investigating' ? 'border-amber-500 border-l-amber-500 bg-amber-50/10 animate-pulse' :
-                          'border-rose-500 border-l-rose-500'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start text-[10px]">
-                          <span className={`font-extrabold uppercase tracking-widest ${
-                            inc.status === 'Resolved' ? 'text-emerald-600' :
-                            inc.status === 'Investigating' ? 'text-amber-600' :
-                            'text-rose-600 animate-pulse'
-                          }`}>{inc.status}</span>
-                          <span className="text-slate-400 font-mono text-[9px]">
-                            {new Date(inc.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} PM
-                          </span>
-                        </div>
-                        <h4 className="text-xs font-extrabold text-slate-800 mt-1.5">{inc.sensorId} - {inc.id}</h4>
-                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{inc.description}</p>
-                        <div className="mt-2.5 pt-2 border-t border-slate-200/55 flex justify-between items-center text-[9px] text-slate-400">
-                          <span className="font-bold">🧑‍🔧 {inc.reporterName}</span>
-                          <span className={`font-bold uppercase px-1 rounded text-[8px] ${
-                            inc.urgency === 'High' ? 'bg-rose-100 text-rose-700' :
-                            inc.urgency === 'Medium' ? 'bg-amber-100 text-amber-700' :
-                            'bg-slate-200 text-slate-600'
-                          }`}>{inc.urgency}</span>
-                        </div>
+                  <div className="space-y-4 flex-1 overflow-y-auto max-h-[350px] pr-1.5">
+                    {loading ? (
+                      <div className="text-center py-8 text-xs text-slate-400">
+                        <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-slate-400" />
+                        <span>กำลังโหลดรายงานล่าสุด...</span>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ) : incidents.length === 0 ? (
+                      <div className="text-center py-12 text-xs text-slate-400 border-2 border-dashed border-slate-100 rounded-xl p-4">
+                        <CheckCircle2 size={32} className="mx-auto mb-2 text-slate-300" />
+                        <p className="font-bold text-slate-500">ไม่มีปัญหาตกค้าง!</p>
+                        <p className="scale-90 text-[10px] mt-0.5 text-slate-400">ทุกเซ็นเซอร์กำลังทำงานสมบูรณ์ดี</p>
+                      </div>
+                    ) : (
+                      incidents.map(inc => (
+                        <div 
+                          key={inc.id}
+                          onClick={() => setSelectedIncident(inc)}
+                          className={`p-3.5 bg-slate-50 hover:bg-slate-100 border-l-4 rounded-xl cursor-pointer transition-all border ${
+                            inc.status === 'Resolved' ? 'border-emerald-500 border-l-emerald-500 bg-emerald-50/10' :
+                            inc.status === 'Investigating' ? 'border-amber-500 border-l-amber-500 bg-amber-50/10 animate-pulse' :
+                            'border-rose-500 border-l-rose-500'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start text-[10px]">
+                            <span className={`font-extrabold uppercase tracking-widest ${
+                              inc.status === 'Resolved' ? 'text-emerald-600' :
+                              inc.status === 'Investigating' ? 'text-amber-600' :
+                              'text-rose-600 animate-pulse'
+                            }`}>{inc.status}</span>
+                            <span className="text-slate-400 font-mono text-[9px]">
+                              {new Date(inc.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} PM
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-extrabold text-slate-800 mt-1.5">{inc.sensorId} - {inc.id}</h4>
+                          <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{inc.description}</p>
+                          <div className="mt-2.5 pt-2 border-t border-slate-200/55 flex justify-between items-center text-[9px] text-slate-400">
+                            <span className="font-bold">🧑‍🔧 {inc.reporterName}</span>
+                            <span className={`font-bold uppercase px-1 rounded text-[8px] ${
+                              inc.urgency === 'High' ? 'bg-rose-100 text-rose-700' :
+                              inc.urgency === 'Medium' ? 'bg-amber-100 text-amber-700' :
+                              'bg-slate-200 text-slate-600'
+                            }`}>{inc.urgency}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100">
-                  <button 
-                    onClick={() => setActiveTab('spreadsheet')}
-                    className="w-full bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-indigo-600 font-bold border border-slate-200 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <FileSpreadsheet size={13} />
-                    <span>แผงดู Google Sheet สำรอง</span>
-                  </button>
+                  <div className="mt-4 pt-3 border-t border-slate-100">
+                    <button 
+                      onClick={() => setActiveTab('spreadsheet')}
+                      className="w-full bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-indigo-600 font-bold border border-slate-200 py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <FileSpreadsheet size={13} />
+                      <span>แผงดู Google Sheet สำรอง</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
           </div>
         )}
 
         {/* Tab 2: Simulated Google Sheet grid representation - Precise request */}
-        {activeTab === 'spreadsheet' && (
+        {activeTab === 'spreadsheet' && userRole === 'admin' && (
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             
             {/* Headers row with sheets-green */}
@@ -1089,7 +1117,7 @@ export default function App() {
         )}
 
         {/* Tab 3: Detailed LINE OA Chat Bot & Push Simulator */}
-        {activeTab === 'line' && (
+        {activeTab === 'line' && userRole === 'admin' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* L1: High Fidelity Mobile Smartphone frame simulating LINE conversation - 5 span */}
@@ -1280,7 +1308,7 @@ export default function App() {
         )}
 
         {/* Tab 4: Informative Google Sheets Apps Script How-To Section */}
-        {activeTab === 'info' && (
+        {activeTab === 'info' && userRole === 'admin' && (
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-8">
             {/* Header */}
             <div>
