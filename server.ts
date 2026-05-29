@@ -15,6 +15,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = 3000;
 
+app.set('trust proxy', true);
 app.use(express.json());
 
 // Enable CORS for frontend during dual-server setups
