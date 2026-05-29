@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import admin from 'firebase-admin';
 import { GoogleGenAI, Type } from '@google/genai';
-import { IncidentReport } from './types.js';
+import { IncidentReport, SensorStatus } from './types.js';
 
 // Path for persistent storage
 const DATA_DIR = path.resolve('./data');
@@ -458,5 +458,99 @@ export async function pushToGoogleSheet(incident: IncidentReport): Promise<void>
     }
   } catch (error) {
     console.error("[Google Sheet] Error sending request to webhook:", error);
+  }
+}
+
+// Fetch sensors dynamically from the Google Sheet tab
+export async function getSensorsFromSheet(): Promise<SensorStatus[]> {
+  const googleSheetId = process.env.GOOGLE_SHEET_ID || '1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI';
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${googleSheetId}/export?format=csv&gid=112576994`;
+
+  try {
+    const res = await fetch(csvUrl);
+    if (!res.ok) {
+      throw new Error(`Google Sheets responded with status ${res.status}`);
+    }
+    const text = await res.text();
+    const lines = text.split(/\r?\n/);
+    
+    const sensors: SensorStatus[] = [];
+    const parseCSVLine = (line: string): string[] => {
+      const result: string[] = [];
+      let cell = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(cell.trim());
+          cell = '';
+        } else {
+          cell += char;
+        }
+      }
+      result.push(cell.trim());
+      return result;
+    };
+
+    for (const line of lines.slice(1)) {
+      if (!line.trim()) continue;
+      const cols = parseCSVLine(line);
+      if (cols.length < 4) continue;
+      
+      const no = cols[0];
+      const name = cols[1];
+      const location = cols[2] || "คลังอุปกรณ์";
+      const statusStr = cols[3].toLowerCase();
+      const tempRange = cols[4];
+      const tempMax = cols[5];
+      const linkId = cols[7];
+
+      if (!name || name === "SensorName" || name === "no.") continue;
+
+      const id = linkId || `SN-${no || Math.random().toString(36).substring(7)}`;
+      const status: 'Online' | 'Error' | 'Maintenance' = statusStr === 'online' ? 'Online' : 'Error';
+      
+      // Reading formatting
+      let lastReading = "N/A";
+      if (tempRange) {
+        lastReading = `${tempRange} °C`;
+      } else if (tempMax) {
+        lastReading = `Max ${tempMax} °C`;
+      }
+
+      // Sensor Type detection
+      const nameLower = name.toLowerCase();
+      let type: 'Temperature' | 'Humidity' | 'Pressure' | 'Voltage' | 'Flow' = 'Temperature';
+      if (nameLower.includes('humidity') || nameLower.includes('ความชื้น') || linkId?.startsWith('DHT22')) {
+        type = 'Humidity';
+      }
+
+      sensors.push({
+        id,
+        name,
+        location,
+        status,
+        lastReading,
+        type
+      });
+    }
+
+    if (sensors.length === 0) {
+      throw new Error("No sensors parsed from sheet");
+    }
+
+    return sensors;
+  } catch (error) {
+    console.error("[Google Sheet Sensors] Error loading sheet sensors, using default list:", error);
+    // Return default sensors list as fallback
+    return [
+      { id: "SN-2044", name: "ตู้เย็นคลัง ตู้แช่ 3 ประตู (Stock3Door)", location: "Server Room A", status: "Online", lastReading: "24.5 °C", type: "Temperature" },
+      { id: "SN-2045", name: "ตู้เย็นคลังวัคซีน (StockVaccine2Door)", location: "กลุ่มงานเภสัช", status: "Error", lastReading: "98.2% RH", type: "Humidity" },
+      { id: "SN-2048", name: "ตู้เย็นคลินิค (SubClinic)", location: "OPD?", status: "Online", lastReading: "1.2 Bar", type: "Pressure" },
+      { id: "SN-3112", name: "ตู้เย็น OPD (OPD2Door)", location: "OPD?", status: "Online", lastReading: "42.1 °C", type: "Temperature" },
+      { id: "SYS-MOD", name: "ตู้เย็นวัคซีน OPD (SubOPDVaccine)", location: "OPD?", status: "Online", lastReading: "Voltage nominal", type: "Voltage" }
+    ];
   }
 }

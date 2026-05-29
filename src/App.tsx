@@ -70,10 +70,11 @@ export default function App() {
 
   const [googleSheetId, setGoogleSheetId] = useState('1Wyqk1i_rUlnAgsAR7PT_w-smEbpTR40lAis69iKzqWI');
 
-  // Fetch incidents on load
+  // Fetch incidents and sensors on load
   useEffect(() => {
     fetchIncidents();
     fetchConfig();
+    fetchSensors();
   }, []);
 
   const fetchConfig = async () => {
@@ -87,6 +88,25 @@ export default function App() {
       }
     } catch (err) {
       console.error("Failed to fetch config:", err);
+    }
+  };
+
+  const fetchSensors = async () => {
+    try {
+      const res = await fetch('/api/sensors');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setSensors(data);
+          // If the currently selected sensor is not in the list, pre-select the first one
+          const currentExists = data.some(s => s.id === selectedSensorId);
+          if (!currentExists) {
+            setSelectedSensorId(data[0].id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch sensors:", err);
     }
   };
 
@@ -108,18 +128,17 @@ export default function App() {
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchIncidents();
-    // Simulate refreshing sensor statistics too
-    setSensors(prev => prev.map(s => {
-      if (s.id === 'SN-2045') return s; // Leave the error one as is unless updated
-      const floatRange = s.type === 'Temperature' ? 1.5 : 0.05;
-      const parsed = parseFloat(s.lastReading);
-      if (isNaN(parsed)) return s;
-      const nextReading = (parsed + (Math.random() - 0.5) * floatRange).toFixed(1);
-      return {
-        ...s,
-        lastReading: `${nextReading} ${s.type === 'Temperature' ? '°C' : s.type === 'Humidity' ? '% RH' : 'Bar'}`
-      };
-    }));
+    try {
+      const res = await fetch('/api/sensors');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setSensors(data);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to refresh sensors:", err);
+    }
     setTimeout(() => setRefreshing(false), 800);
   };
 

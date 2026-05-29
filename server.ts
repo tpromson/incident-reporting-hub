@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate, pushToGoogleSheet } from './src/api.js';
+import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate, pushToGoogleSheet, getSensorsFromSheet } from './src/api.js';
 import { IncidentReport } from './src/types.js';
 
 // Load environment variables
@@ -34,6 +34,16 @@ app.get('/api/incidents', async (req, res) => {
   try {
     const incidents = await getIncidents();
     res.json(incidents);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all sensors from Google Sheets
+app.get('/api/sensors', async (req, res) => {
+  try {
+    const sensors = await getSensorsFromSheet();
+    res.json(sensors);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

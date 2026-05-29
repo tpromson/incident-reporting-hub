@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
-import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate, pushToGoogleSheet } from './src/api';
+import { getIncidents, saveIncidents, analyzeIncidentIssue, pushLineNotification, pushLineStatusUpdate, pushToGoogleSheet, getSensorsFromSheet } from './src/api';
 
 export default defineConfig(() => {
   return {
@@ -134,6 +134,20 @@ export default defineConfig(() => {
                     res.end(JSON.stringify({ error: e.message }));
                   }
                 });
+              } else {
+                res.statusCode = 405;
+                res.end(JSON.stringify({ error: 'Method not allowed' }));
+              }
+            } else if (req.url === '/api/sensors') {
+              res.setHeader('Content-Type', 'application/json');
+              if (req.method === 'GET') {
+                try {
+                  const data = await getSensorsFromSheet();
+                  res.end(JSON.stringify(data));
+                } catch (e: any) {
+                  res.statusCode = 500;
+                  res.end(JSON.stringify({ error: e.message }));
+                }
               } else {
                 res.statusCode = 405;
                 res.end(JSON.stringify({ error: 'Method not allowed' }));
